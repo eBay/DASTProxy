@@ -1,4 +1,4 @@
-AppScanProxySolution
+DASTProxy
 ====================
 
 Repository for a solution related to a custom solution to automate security scans after functional test flows.
