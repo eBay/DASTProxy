@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:oxm="http://www.springframework.org/schema/oxm"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:security="http://www.springframework.org/schema/security"
+	xmlns:task="http://www.springframework.org/schema/task" xmlns:jee="http://www.springframework.org/schema/jee"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+							http://www.springframework.org/schema/beans/spring-beans.xsd
+							http://www.springframework.org/schema/mvc 
+							http://www.springframework.org/schema/mvc/spring-mvc.xsd
+							http://www.springframework.org/schema/context 
+							http://www.springframework.org/schema/context/spring-context.xsd
+							http://www.springframework.org/schema/oxm
+							http://www.springframework.org/schema/oxm/spring-oxm.xsd
+							http://www.springframework.org/schema/util
+  							http://www.springframework.org/schema/util/spring-util.xsd
+  							http://www.springframework.org/schema/security
+  							http://www.springframework.org/schema/spring-security.xsd
+  							http://www.springframework.org/schema/task
+   							http://www.springframework.org/schema/task/spring-task.xsd
+   							http://www.springframework.org/schema/jee 
+                    		http://www.springframework.org/schema/jee/spring-jee.xsd">
+
+
+	<!-- Setup spring to pull in @Controller, @RequestMapping, etc Configuration 
+		scans specified packages for classes configured as Spring managed beans and 
+		automatically sets up objects annotated with @Controller, @Service etc. -->
+	<context:component-scan base-package="com.dastproxy.controller" />
+	<context:component-scan base-package="com.dastproxy.controller.rest" />
+	<context:component-scan base-package="com.dastproxy.services" />
+	<context:component-scan base-package="com.dastproxy.services.impl" />
+	<context:component-scan base-package="com.dastproxy.configuration" />
+	<context:component-scan base-package="com.dastproxy.dao" />
+	<context:component-scan base-package="com.dastproxy.dao.impl" />
+
+	<!-- Activates @Scheduled and @Async annotations for scheduling -->
+	<task:annotation-driven />
+	<mvc:annotation-driven />
+
+	<mvc:resources mapping="/css/**" location="/css/"></mvc:resources>
+	<mvc:resources mapping="/js/**" location="/js/"></mvc:resources>
+	<mvc:resources mapping="/images/**" location="/images/"></mvc:resources>
+	<mvc:resources mapping="/fonts/**" location="/fonts/"></mvc:resources>
+
+	<!-- Configures view for returning JSON to the client -->
+	<bean
+		class="org.springframework.web.servlet.view.json.MappingJackson2JsonView">
+		<property name="contentType" value="text/plain" />
+	</bean>
+
+	<bean
+		class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
+		<property name="messageConverters">
+			<util:list id="beanList">
+				<ref bean="jsonMessageConverter" />
+			</util:list>
+		</property>
+	</bean>
+
+	<!-- Converts JSON to POJO and vice versa -->
+	<bean id="jsonMessageConverter"
+		class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter" />
+
+	<bean
+		class="org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping">
+	</bean>
+
+
+	<bean
+		class="org.springframework.web.servlet.mvc.support.ControllerClassNameHandlerMapping" />
+
+	<!-- Most controllers will use the ControllerClassNameHandlerMapping above, 
+		but for the index controller we are using ParameterizableViewController, 
+		so we must define an explicit mapping for it. -->
+	<bean id="urlMapping"
+		class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+		<!-- <property name="mappings"> <props> <prop key="index.htm">indexController</prop> 
+			</props> </property> -->
+	</bean>
+
+	<bean id="viewResolver"
+		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="prefix">
+			<value>/</value>
+		</property>
+		<property name="suffix">
+			<value>.jsp</value>
+		</property>
+	</bean>
+
+	<bean id="velocityEngine"
+		class="org.springframework.ui.velocity.VelocityEngineFactoryBean">
+	</bean>
+
+	<bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
+	</bean>
+
+	<jee:jndi-lookup id="dataSource" jndi-name="jdbc/DatabaseName"
+		expected-type="javax.sql.DataSource" />
+
+	<!-- Hibernate 4 SessionFactory Bean definition -->
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="annotatedClasses">
+			<list>
+				<value>com.dastproxy.model.ProxyEntity</value>
+				<value>com.dastproxy.model.Proxy</value>
+				<value>com.dastproxy.model.User</value>
+				<value>com.dastproxy.model.ScanConfiguration</value>
+				<value>com.dastproxy.model.Scan</value>
+				<value>com.dastproxy.model.Report</value>
+				<value>com.dastproxy.model.Issue</value>
+				<value>com.dastproxy.model.IssueVariant</value>
+				<value>com.dastproxy.model.Traffic</value>
+				<value>com.dastproxy.model.Difference</value>
+				<value>com.dastproxy.model.RequestModification</value>
+				<value>com.dastproxy.model.jira.Fields</value>
+				<value>com.dastproxy.model.jira.IssueType</value>
+				<value>com.dastproxy.model.jira.Project</value>
+				<value>com.dastproxy.model.jira.Reporter</value>
+				<value>com.dastproxy.model.jira.JiraIssueRequest</value>
+				<value>com.dastproxy.model.jira.JiraIssueResponse</value>
+			</list>
+		</property>
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+				<prop key="hibernate.current_session_context_class">thread</prop>
+				<prop key="hibernate.show_sql">true</prop>
+			</props>
+		</property>
+	</bean>
+
+
+</beans>

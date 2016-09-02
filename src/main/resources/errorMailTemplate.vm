@@ -1,0 +1,17 @@
+Hi, <br/>
+
+<br/>
+There has been exception in DAST Proxy. Some of the details are:
+<br/><br/>
+<b>Exception Details: </b>
+<br/><br/>Environment:
+${currentEnvironment}
+<br/><br/>Exception Type:
+ ${exceptionClass}
+ <br/><br/>
+ Exception Message:
+ ${exceptionMessage}<br/><br/>
+ Exception Stack Trace: <br/><br/>
+ ${exceptionStackTrace}
+ <br/><br/>
+ Please do not reply to this email. You are receiving this email because you are a part of ${exceptionDL}.

@@ -1,0 +1,262 @@
+package com.dastproxy.model;
+
+import java.util.Date;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+import javax.persistence.Transient;
+import org.hibernate.annotations.Cascade;
+import org.hibernate.annotations.CascadeType;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
+import org.springframework.context.annotation.Lazy;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+@Entity
+@Table(name="scan")
+public class Scan {
+	
+	@Transient
+	@JsonIgnore
+	private String userForlderId;
+	
+	@Id
+	@Column(name="scan_id")
+	private String scanId;
+	
+	@Column(name="scan_name")
+	private String scanName;
+	
+	@Column(name="scan_state")
+	private String scanState;
+	
+	@Column(name="scan_last_run", nullable=true)
+	private String scanLastRun;
+	
+	@Column(name="email_sent")
+	private boolean emailSent;
+	
+	@OneToOne
+	@Cascade(CascadeType.ALL)
+	@JoinColumn(name="report_id", nullable=true)
+	private Report report;
+	
+	@Column(name="first_set_up")
+	private Date firstSetUp;
+	
+	@OneToOne
+	@Cascade(CascadeType.SAVE_UPDATE)
+	@JoinColumn(name="user_id")
+	@Lazy(value=false)
+	private User user;
+	
+	@Column(name="set_up_via_bluefin")
+	private boolean setUpViaBluefin;
+	
+	@Column(name="test_case_name")
+	private String testCaseName;
+	
+	@Column(name="test_suite_name", nullable=true)
+	private String testSuiteName;
+
+	@Column(name="to_be_tracked")
+	private Boolean toBeTracked;
+	
+	/**
+	 * @return scanId
+	 */
+	public String getScanId() {
+		return scanId;
+	}
+	
+	/**
+	 * 
+	 * @param scanId
+	 */
+	public void setScanId(final String scanId) {
+		this.scanId = scanId;
+	}
+	
+	/**
+	 * @return scanName
+	 */
+	public String getScanName() {
+		return scanName;
+	}
+	
+	/**
+	 * 
+	 * @param scanName
+	 */
+	public void setScanName(final String scanName) {
+		this.scanName = scanName;
+	}
+	/**
+	 * 
+	 * @return scanState
+	 */
+	public String getScanState() {
+		return scanState;
+	}
+	
+	/**
+	 * 
+	 * @param scanState
+	 */
+	public void setScanState(final String scanState) {
+		this.scanState = scanState;
+	}
+	
+	/**
+	 * 
+	 * @return scanLastRun
+	 */
+	public String getScanLastRun() {
+		return scanLastRun;
+	}
+	
+	/**
+	 * 
+	 * @param scanLastRun
+	 */
+	public void setScanLastRun(final String scanLastRun) {
+		this.scanLastRun = scanLastRun;
+	}
+	
+	/**
+	 * 
+	 * @return userFolderId
+	 */
+	public String getUserForlderId() {
+		return userForlderId;
+	}
+	
+	/**
+	 * 
+	 * @param userForlderId
+	 */
+	public void setUserForlderId(final String userForlderId) {
+		this.userForlderId = userForlderId;
+	}
+	
+	/**
+	 * 
+	 * @return emailSent
+	 */
+	public boolean isEmailSent() {
+		return emailSent;
+	}
+	
+	/**
+	 * 
+	 * @param emailSent
+	 */
+	public void setEmailSent(final boolean emailSent) {
+		this.emailSent = emailSent;
+	}
+	
+	
+
+	/**
+	 * @return the report
+	 */
+	public Report getReport() {
+		return report;
+	}
+
+	/**
+	 * @param report the report to set
+	 */
+	public void setReport(Report report) {
+		this.report = report;
+	}
+
+	/**
+	 * @return the user
+	 */
+	public User getUser() {
+		return user;
+	}
+
+	/**
+	 * @param user the user to set
+	 */
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	/**
+	 * @return the firstSetUp
+	 */
+	public Date getFirstSetUp() {
+		return firstSetUp;
+	}
+
+	/**
+	 * @param firstSetUp the firstSetUp to set
+	 */
+	public void setFirstSetUp(Date firstSetUp) {
+		this.firstSetUp = firstSetUp;
+	}
+
+	/**
+	 * @return the setUpViaBluefin
+	 */
+	public boolean isSetUpViaBluefin() {
+		return setUpViaBluefin;
+	}
+
+	/**
+	 * @param setUpViaBluefin the setUpViaBluefin to set
+	 */
+	public void setSetUpViaBluefin(boolean setUpViaBluefin) {
+		this.setUpViaBluefin = setUpViaBluefin;
+	}	
+	
+	/**
+	 * @return the testCaseName
+	 */
+	public String getTestCaseName() {
+		return testCaseName;
+	}
+
+	/**
+	 * @param testCaseName the testCaseName to set
+	 */
+	public void setTestCaseName(String testCaseName) {
+		this.testCaseName = testCaseName;
+	}
+	
+	/**
+	 * @return the testSuiteName
+	 */
+	public String getTestSuiteName() {
+		return testSuiteName;
+	}
+
+	/**
+	 * @param testSuiteName the testSuiteName to set
+	 */
+	public void setTestSuiteName(String testSuiteName) {
+		this.testSuiteName = testSuiteName;
+	}
+
+	/**
+	 * @return the toBeTracked
+	 */
+	public Boolean getToBeTracked() {
+		return toBeTracked;
+	}
+
+	/**
+	 * @param toBeTracked the toBeTracked to set
+	 */
+	public void setToBeTracked(Boolean toBeTracked) {
+		this.toBeTracked = toBeTracked;
+	}
+}

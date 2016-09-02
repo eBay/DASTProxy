@@ -1,0 +1,24 @@
+<html>
+<body>
+Hi,
+<br><br>Here are the details of the raised JIRA issue:
+<br><br>
+<table id="tableid" border="1" cellpadding="5" >
+<thead>
+<tr>
+<th id="jiraKey" bgcolor="#B6B6B4">Jira Key</th>
+<td>${jiraKey}</td>
+</tr>
+<tr>
+<th id="jiraUrl" bgcolor="#B6B6B4">Jira Url</th>
+<td>${jiraUrl}</td>
+</tr>
+</thead>
+</table>
+
+<p>
+Please <a href="mailto:${contactUsSupportDl}">Contact Us</a> for any questions.
+
+<p><b>Note:</b> Please do not reply to this email.</p>
+</body>
+</html>

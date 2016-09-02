@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration status="error">
+	<appenders>
+		<Console name="Console" target="SYSTEM_OUT">
+			<PatternLayout
+				pattern="[DASTProxy] %d{MM/dd/yyyy HH:mm:ss,SSS} - %C{1}.%M (%F:%L) >> %p: %m%n" />
+		</Console>
+		
+		<RollingRandomAccessFile name="RollingRandomAccessFileLogger" fileName="${sys:catalina.base}/logs/DASTProxy.log" 
+									filePattern="${sys:catalina.base}/logs/$${date:yyyy-MM}/DASTProxy-%d{MM-dd-yyyy}-%i.log">
+			<PatternLayout>
+				<pattern>[DASTProxy] %d{MM/dd/yyyy HH:mm:ss.SSS} - %C{1}.%M (%F:%L) >> %p: %m%n</pattern>
+			</PatternLayout>
+			<Policies>
+				<TimeBasedTriggeringPolicy interval="12" modulate="true"/>
+				<SizeBasedTriggeringPolicy size="250 MB"/>
+			</Policies>
+			<DefaultRolloverStrategy max="100"/>
+		</RollingRandomAccessFile>
+	</appenders>
+	<Loggers>
+		<Root level="error">	
+			<appender-ref ref="RollingRandomAccessFileLogger"/>
+		</Root>	
+		<logger name="org.springframework" level="error">
+            <appender-ref ref="RollingRandomAccessFileLogger"/>
+        </logger>
+        <logger name="org.springframework.security" level="error">
+            <appender-ref ref="RollingRandomAccessFileLogger"/>
+        </logger>
+        <logger name="org.springframework.security.ldap" level="error">
+            <appender-ref ref="RollingRandomAccessFileLogger"/>
+        </logger>
+        <logger name="org.apache.directory" level="error">
+            <appender-ref ref="RollingRandomAccessFileLogger"/>
+        </logger>
+        <logger name="org.hibernate" level="error">
+            <appender-ref ref="RollingRandomAccessFileLogger"/>
+        </logger>
+	</Loggers>
+</configuration>

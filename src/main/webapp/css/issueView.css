@@ -1,0 +1,134 @@
+.divTable {
+	width: 100%;
+	display: block;
+	max-width: 100%;
+	min-width: 100%;
+	background-color: #eee;
+	border: 1px solid #666666;
+	border-radius: 6px 6px 6px 6px;
+	border-spacing: 5px; /*cellspacing:poor IE support for  this*/
+	margin-bottom: 1.5em;
+}
+
+.divRow {
+	clear: both;
+	width: 100%;
+	max-width: 100%;
+	min-width: 100%;
+}
+
+.divCell {
+	float: left; /*fix for  buggy browsers*/
+	width: 25%;
+	max-width: 25%;
+	min-width: 25%;
+}
+
+.divCellLabel {
+	background-color: #eee;
+}
+
+.halfWidth {
+	width: 50%;
+	max-width: 50%;
+	min-width: 50%;
+	float: left;
+}
+
+.querterWidth {
+	width: 25%;
+	max-width: 25%;
+	min-width: 25%;
+	float: left;
+}
+
+.threeFourthWifth {
+	width: 75%;
+	max-width: 75%;
+	min-width: 75%;
+	float: left;
+}
+
+.wordwrap {
+	white-space: pre-wrap; /* css-3 */
+	white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
+	white-space: -pre-wrap; /* Opera 4-6 */
+	white-space: -o-pre-wrap; /* Opera 7 */
+	word-wrap: break-word; /* Internet Explorer 5.5+ */
+}
+
+.lead>div {
+	display: table;
+	margin: 1.5em 0;
+	width: inherit;
+}
+
+.lead>div>div {
+	margin: 0.3em 0 0.3em 0.3em;
+	position: inherit;
+}
+
+.panel-heading a:after {
+	font-family: 'Glyphicons Halflings';
+	content: "\e114";
+	float: right;
+	color: grey;
+}
+.panel-heading a.collapsed:after {
+	content: "\e080";
+}
+
+.traffic {
+	height: auto;
+	width: auto;
+	overflow: auto;
+	max-heigth: 100px;
+}
+
+.footer {
+	background-color: #f5f5f5;
+	/* bottom: auto; */
+	position: absolute;
+	width: 100%;
+}
+
+.publishToJiraButton {
+	float: right;
+}
+
+.issueLabelText {
+	color: #777;
+	font-weight: bold;
+	font-size: 20px;
+}
+
+.issueDetailsText {
+	color: #938093;
+	font-size: 18px;
+}
+
+.severityHigh {
+	color: #F75D59;
+}
+
+.severityMedium {
+	color: #FBB917;
+}
+
+.severityLow {
+	color: #cfcf00;
+}
+
+.error-template {
+	padding: 40px 15px;
+	text-align: center;
+}
+
+.error-actions {
+	margin-top: 15px;
+	margin-bottom: 15px;
+}
+
+.error-actions .btn {
+	margin-right: 10px;
+}
