@@ -28,7 +28,7 @@ public interface DASTApiService {
 			IOException, SAXException, DASTProxyException,
 			XPathExpressionException;
 
-	public boolean checkIfScanIsPresentForUser(String userId, String scanId)
+	public boolean checkIfScanIsNotPresentForUser(String userId, String scanId)
 			throws UnsupportedEncodingException, ParserConfigurationException,
 			IOException, SAXException, DASTProxyException,
 			XPathExpressionException;

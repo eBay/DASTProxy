@@ -30,6 +30,10 @@ public class AppScanConstants {
 	public static final String PROPERTIES_SMTP_SERVER = "smtpServerUrl";
 	public static final String PROPERTIES_ORG_HTTP_PROXY = "orgHttpProxy";
 	public static final String PROPERTIES_DAST_SCANNER_SCANNING_TEMPLATE_NAME_OR_ID = "dastScannerScanningTemplateIdOrName";
+	public static final String EMAIL_DOMAIN = "emailDomain";
+	public static final String WHITE_LIST_PIBLIC_IPS = "whitelist_public_ips";
+
+
 	
 	// During proxy registration at a certain proxy port, this is the number of times
 	// the application will try again.
@@ -97,15 +101,16 @@ public class AppScanConstants {
 	public static final String APPSCAN_JOB_SCAN_STATE_READY = "Ready";
 	public static final String APPSCAN_JOB_SCAN_STATE_COMPLETED="Post Processing";
 	public static final String APPSCAN_JOB_SCAN_STATE_SUSPENDED="Suspended";
-	public static final String APPSCAN_JOB_SCAN_STATUS_RECEIVER = "@ebay.com";
 	public static final String APPSCAN_JOB_SCAN_STATUS_URL = RootConfiguration.getProperties().getProperty(PROPERTIES_APP_SCAN_BASE_URL_IDENTIFIER) +"Jobs/JobStatistics.aspx?";
-	public static final String APPSCAN_SERVICE_FOR_FOLDERITEM = RootConfiguration.getProperties().getProperty(PROPERTIES_APP_SCAN_BASE_SERVICES_URL_IDENTIFIER) + "folderitems/";
-	public static final String APPSCAN_JOB_READY_FOR_SCAN="Ready";
+	public static final String APPSCAN_SERVICE_FOR_FOLDERITEM ="folderitems/";
+	public static final String APPSCAN_JOB_READY_FOR_SCAN="New";
 	public static final String APPSCAN_REPORT_SENDER = RootConfiguration.getProperties().getProperty(PROPERTIES_DO_NOT_REPLY_EMAIL_ID_IDENTIFIER);
 	
 	public static final String APPSCAN_CONTACT_US_SUPPORT_DL=RootConfiguration.getProperties().getProperty(PROPERTIES_CONTACT_US_SUPPORT_DL_IDENTIFIER);
 	public static final String APPSCAN_REPORT_TYPE = "OWASP";
 	
+	public static final String APPSCAN_MANUAL_TEST_SUITE = "Manual Test Suite";
+
 	/* ***************************  END OF APPSCAN RELATED CONSTANTS ***********************************************/
 	
 	/* ***************************  MAILING TEMPLATES *************************************************************/
@@ -145,6 +150,9 @@ public class AppScanConstants {
 	public static final String JNDI_SMTP_SERVER = "prop/smtpServerDomain";
 	public static final String JNDI_ORG_HTTP_PROXY = "prop/orgHttpProxy";
 	public static final String JNDI_DAST_SCANNER_SCANNING_TEMPLATE_NAME_OR_ID = "prop/dastScannerScanningTemplateIdOrName";
+	public static final String JNDI_EMAIL_DOMAIN = "prop/emailDomain";
+	public static final String JNDI_WHITELIST_PUBLIC_IPS = "prop/whiteListPublicIPs";
+
 	
 	/* ***************************  End of JNDI Constants  ********************************************************/
 	

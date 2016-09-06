@@ -49,12 +49,15 @@
 		class="com.dastproxy.services.security.DASTGrantedAuthoritiesMapper" />
 
 	<beans:bean id="ldapActiveDirectoryAuthProvider"
-		class="org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider">
+class="org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider">
 		<beans:constructor-arg>
 			<jee:jndi-lookup jndi-name="java:comp/env/prop/ldapDomain" />		
 		</beans:constructor-arg>
 		<beans:constructor-arg>
 			<jee:jndi-lookup jndi-name="java:comp/env/prop/ldapURL" />
+		</beans:constructor-arg>
+		<beans:constructor-arg>
+			<jee:jndi-lookup jndi-name="java:comp/env/prop/ldapRootDn" />
 		</beans:constructor-arg>
 		<beans:property name="useAuthenticationRequestCredentials"
 			value="true" />

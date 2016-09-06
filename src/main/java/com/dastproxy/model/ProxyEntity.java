@@ -65,6 +65,9 @@ public class ProxyEntity implements Serializable{
 	@Column(name="testCaseSuiteName")
 	private String testCaseSuiteName;
 	
+	@Column(name="testsuiteDynamicIdentifier")
+	private String testsuiteDynamicIdentifier;
+	
 	// Here if a user is in the database, point to the same user.
 	// However when deleting the this entry do to remove the user. Leave them there as is.
 	@OneToOne(fetch=FetchType.EAGER)
@@ -280,6 +283,30 @@ public class ProxyEntity implements Serializable{
 						.hashCode());
 		result = prime * result + ((user == null) ? 0 : user.hashCode());
 		return result;
+	}
+	public String getTestCasePackageName() {
+		return testCasePackageName;
+	}
+
+	public void setTestCasePackageName(String testCasePackageName) {
+		this.testCasePackageName = testCasePackageName;
+	}
+
+	public String getTestCaseClassName() {
+		return testCaseClassName;
+	}
+
+	public void setTestCaseClassName(String testCaseClassName) {
+		this.testCaseClassName = testCaseClassName;
+	}
+	
+	
+	public String getTestsuiteDynamicIdentifier() {
+		return testsuiteDynamicIdentifier;
+	}
+
+	public void setTestsuiteDynamicIdentifier(String testsuiteDynamicIdentifier) {
+		this.testsuiteDynamicIdentifier = testsuiteDynamicIdentifier;
 	}
 
 	/* (non-Javadoc)

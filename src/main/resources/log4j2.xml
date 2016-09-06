@@ -13,7 +13,7 @@
 			</PatternLayout>
 			<Policies>
 				<TimeBasedTriggeringPolicy interval="12" modulate="true"/>
-				<SizeBasedTriggeringPolicy size="250 MB"/>
+				<SizeBasedTriggeringPolicy size="100 MB"/>
 			</Policies>
 			<DefaultRolloverStrategy max="100"/>
 		</RollingRandomAccessFile>
@@ -22,20 +22,29 @@
 		<Root level="error">	
 			<appender-ref ref="RollingRandomAccessFileLogger"/>
 		</Root>	
-		<logger name="org.springframework" level="error">
-            <appender-ref ref="RollingRandomAccessFileLogger"/>
-        </logger>
-        <logger name="org.springframework.security" level="error">
-            <appender-ref ref="RollingRandomAccessFileLogger"/>
+		<logger name="org.springframework.security" level="error">
+            <appender-ref ref="Console"/>
         </logger>
         <logger name="org.springframework.security.ldap" level="error">
-            <appender-ref ref="RollingRandomAccessFileLogger"/>
+            <appender-ref ref="Console"/>
         </logger>
-        <logger name="org.apache.directory" level="error">
-            <appender-ref ref="RollingRandomAccessFileLogger"/>
+        <logger name="org.springframework.security.ldap.authentication" level="error">
+            <appender-ref ref="Console"/>
         </logger>
-        <logger name="org.hibernate" level="error">
-            <appender-ref ref="RollingRandomAccessFileLogger"/>
+        <logger name="org.springframework.security.ldap.authentication.ad" level="error">
+            <appender-ref ref="Console"/>
+        </logger>
+        <logger name="com.dastproxy.services" level="debug">
+            <appender-ref ref="Console"/>
+        </logger>	
+		<logger name="com.dastproxy.services.impl" level="debug">
+            <appender-ref ref="Console"/>
+        </logger>
+        <logger name="com.dastproxy.dao.impl" level="error">
+            <appender-ref ref="Console"/>
+        </logger>	
+        <logger name="com.dastproxy.controller.rest" level="debug">
+            <appender-ref ref="Console"/>
         </logger>
 	</Loggers>
 </configuration>

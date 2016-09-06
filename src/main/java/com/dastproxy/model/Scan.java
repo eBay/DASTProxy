@@ -1,18 +1,19 @@
 package com.dastproxy.model;
 
 import java.util.Date;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+
 import org.hibernate.annotations.Cascade;
 import org.hibernate.annotations.CascadeType;
-import org.hibernate.annotations.Fetch;
-import org.hibernate.annotations.FetchMode;
 import org.springframework.context.annotation.Lazy;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -64,9 +65,28 @@ public class Scan {
 	@Column(name="test_suite_name", nullable=true)
 	private String testSuiteName;
 
+	@Column(name="testsuite_package", nullable=true)
+	private String testSuitePackage;
+
 	@Column(name="to_be_tracked")
 	private Boolean toBeTracked;
 	
+	@Column(name="testsuite_dynamic_identifier")
+	private String tsDynamicIdentifier;
+
+	@Column(name="scan_recording_id")
+	private Long recordingId;
+
+	@Column(name="breeze_unique_timestamp")
+	private Long breezeUniqueTS;
+	/*
+	@Column(name="scan_batch_id")
+	private Long scanBatchId;
+	*/
+	
+    @ManyToOne(fetch=FetchType.LAZY)
+    @JoinColumn(name="scan_batch_id")
+	private ScanBatch batch;
 	/**
 	 * @return scanId
 	 */
@@ -259,4 +279,47 @@ public class Scan {
 	public void setToBeTracked(Boolean toBeTracked) {
 		this.toBeTracked = toBeTracked;
 	}
+
+	public Long getRecordingId() {
+		return recordingId;
+	}
+
+	public void setRecordingId(Long recordingId) {
+		this.recordingId = recordingId;
+	}
+
+	public String getTsDynamicIdentifier() {
+		return tsDynamicIdentifier;
+	}
+
+	public void setTsDynamicIdentifier(String tsDynamicIdentifier) {
+		this.tsDynamicIdentifier = tsDynamicIdentifier;
+	}
+
+	public Long getBreezeUniqueTS() {
+		return breezeUniqueTS;
+	}
+
+	public void setBreezeUniqueTS(Long breezeUniqueTS) {
+		this.breezeUniqueTS = breezeUniqueTS;
+	}
+
+	public ScanBatch getBatch() {
+		return batch;
+	}
+
+	public void setBatch(ScanBatch batch) {
+		this.batch = batch;
+	}
+
+	public String getTestSuitePackage() {
+		return testSuitePackage;
+	}
+
+	public void setTestSuitePackage(String testSuitePackage) {
+		this.testSuitePackage = testSuitePackage;
+	}
+
+
+	
 }

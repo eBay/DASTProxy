@@ -139,6 +139,18 @@ public final class RootConfiguration {
 						AppScanConstants.PROPERTIES_DAST_SCANNER_SCANNING_TEMPLATE_NAME_OR_ID,
 						(String) context
 								.lookup(AppScanConstants.JNDI_DAST_SCANNER_SCANNING_TEMPLATE_NAME_OR_ID));
+
+				properties
+						.setProperty(
+								AppScanConstants.EMAIL_DOMAIN,
+								(String) context
+										.lookup(AppScanConstants.JNDI_EMAIL_DOMAIN));
+				properties
+				.setProperty(
+						AppScanConstants.WHITE_LIST_PIBLIC_IPS,
+						(String) context
+								.lookup(AppScanConstants.JNDI_WHITELIST_PUBLIC_IPS));
+
 			} catch (NamingException namingException) {
 				LOGGER.error(
 						"There has been an error in RootConfiguration while setting up JNDI Configured Properties. The details are {}",

@@ -4,4 +4,3 @@ call cd /D %PROJECT_DIR%
 call mvn  clean eclipse:clean
 call mvn  eclipse:eclipse
 call mvn   -e clean install
-call pause

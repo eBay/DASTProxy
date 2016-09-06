@@ -9,6 +9,8 @@
 var model = {
 
 	getProxy : function(proxyIdentificationEntity) {
+		recordingName = $('#recording_name').val();
+		$('#recording_name').val("");
 
 		var responseJsonObject = null;
 		$.ajax({
@@ -96,12 +98,15 @@ var model = {
 
 	},
 
-	getScanSetUp : function(userId) {
+	getScanSetUp : function(userId, recordingName1) {
+		if (recordingName1 ==''){
+			recordingName1='none';
+		}
 
 		var responseJsonObject = null;
 		$.ajax({
 			type : "GET",
-			url : "rest/v1/security/" + userId,
+			url : "rest/v1/security/" + userId + "/" + recordingName1,
 			async : false,
 			dataType : "json",
 			success : function(serverRespone) {

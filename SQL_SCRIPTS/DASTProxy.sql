@@ -435,7 +435,7 @@ ADD COLUMN `issue_variant_id` VARCHAR(45) NOT NULL COMMENT '' AFTER `report_id`,
 DROP PRIMARY KEY,
 ADD PRIMARY KEY (`issue_id`, `report_id`, `issue_variant_id`)  COMMENT '';
 
-CREATE TABLE `dast_db_dev`.`jira` (
+CREATE TABLE `dast_db`.`jira` (
   `jira_key` VARCHAR(45) NOT NULL COMMENT '',
   `self` VARCHAR(45) NULL COMMENT '',
   PRIMARY KEY (`key`)  COMMENT '');
@@ -461,5 +461,4 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON `dast_db`.`scan_configuration` TO 'dast_
 GRANT SELECT, INSERT, UPDATE, DELETE ON `dast_db`.`issue` TO 'dast_db'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON `dast_db`.`issue_variant` TO 'dast_db'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON `dast_db`.`report` TO 'dast_db'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON `dast_db`.`scan` TO 'dast_db'@'localhost'
--- Dump completed on 2014-10-20  0:32:33
+GRANT SELECT, INSERT, UPDATE, DELETE ON `dast_db`.`scan` TO 'dast_db'@'localhost';

@@ -20,14 +20,27 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+
+import javax.inject.Inject;
+
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import com.dastproxy.common.constants.AppScanConstants;
 import com.dastproxy.configuration.RootConfiguration;
+import com.dastproxy.dao.DastDAO;
 import com.dastproxy.model.DASTProxyException;
 import com.dastproxy.model.Issue;
+import com.dastproxy.model.Recording;
+import com.dastproxy.model.RecordingBatch;
 import com.dastproxy.model.Report;
+import com.dastproxy.model.Scan;
+import com.dastproxy.model.ScanBatch;
 import com.dastproxy.model.User;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.Authentication;
@@ -35,8 +48,11 @@ import org.springframework.security.core.Authentication;
 public final class AppScanUtils {
 
 	// Logger for this classed. Based on Log4j.
-	private static final Logger LOGGER = LogManager
-			.getLogger(AppScanUtils.class.getName());
+	private static final Logger LOGGER = LogManager.getLogger(AppScanUtils.class.getName());
+
+	@Inject
+	@Qualifier("dastDAOImpl")
+	private DastDAO dao;
 
 	private AppScanUtils() {
 
@@ -328,5 +344,48 @@ public final class AppScanUtils {
 		}
 
 		return finalIssuesList;
+	}
+	
+	private Recording createRecording(String name, String owner, String harFilename){
+		Recording recordingInstance = new Recording();
+		if (name != null && !"none".equals(name)){
+			if (name.length() > 45) name = name.substring(0, 44);
+			recordingInstance.setTestcaseName(name);
+		} else {
+			recordingInstance.setTestcaseName(owner + AppScanUtils.returnDateInPredefinedFormat());
+		}
+
+		recordingInstance.setOwner(owner);
+		recordingInstance.setHarFilename(harFilename);
+		recordingInstance.setEnabled(true);
+		Date now = new Date();
+		recordingInstance.setDateCreated(now);
+		recordingInstance.setLastModified(now);
+
+		return recordingInstance;
+	}
+
+	private RecordingBatch createRecordingBatch(String testsuiteName, boolean isManual){
+		RecordingBatch batch = new RecordingBatch();
+		batch.setTestsuiteName(testsuiteName);
+		batch.setEnabled(true);
+		batch.setDateCreated(new Date());
+		batch.setManualTestBatch(isManual);
+		batch.setOwner(AppScanUtils.getLoggedInUser().getUserId());
+
+		return batch;
+	}
+
+	private ScanBatch createAndSaveScanBatch(Long recordingBatchId, List<Scan> scans){
+		ScanBatch batch = new ScanBatch();
+		batch.setOwner(AppScanUtils.getLoggedInUser().getUserId());
+		batch.setTestsuiteName(AppScanConstants.APPSCAN_MANUAL_TEST_SUITE);
+		batch.setDateCreated(new Date());
+		batch.setSubsetOfBatch(true);
+		batch.setRecordingBatchId(recordingBatchId);
+		batch.setScans(scans);
+
+		dao.saveGenericEntity(batch);
+		return batch;
 	}
 }

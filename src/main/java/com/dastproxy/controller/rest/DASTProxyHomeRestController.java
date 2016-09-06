@@ -10,14 +10,24 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.inject.Inject;
+import javax.servlet.http.HttpServletResponse;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,31 +37,32 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.View;
-import org.springframework.http.MediaType;
-import javax.inject.Inject;
-import javax.servlet.http.HttpServletResponse;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.XPathExpressionException;
+import org.xml.sax.SAXException;
+
+import com.dastproxy.common.constants.AppScanConstants;
+import com.dastproxy.common.utils.AppScanUtils;
+import com.dastproxy.common.utils.DastUtils;
+import com.dastproxy.common.utils.MailUtils;
+import com.dastproxy.configuration.RootConfiguration;
+import com.dastproxy.dao.DastDAO;
 import com.dastproxy.model.ContactUsIssue;
 import com.dastproxy.model.DASTProxyException;
 import com.dastproxy.model.Issue;
+import com.dastproxy.model.IssueVO;
 import com.dastproxy.model.Proxy;
 import com.dastproxy.model.ProxyEntity;
+import com.dastproxy.model.Recording;
+import com.dastproxy.model.RecordingBatch;
 import com.dastproxy.model.Scan;
+import com.dastproxy.model.ScanBatch;
 import com.dastproxy.model.ScanConfiguration;
 import com.dastproxy.model.User;
 import com.dastproxy.model.jira.JiraIssueResponse;
 import com.dastproxy.services.BrowserMobServiceBean;
 import com.dastproxy.services.DASTApiService;
 import com.dastproxy.services.JiraPublisherService;
-import com.dastproxy.common.constants.AppScanConstants;
-import com.dastproxy.common.utils.AppScanUtils;
-import com.dastproxy.common.utils.MailUtils;
-import com.dastproxy.configuration.RootConfiguration;
-import com.dastproxy.dao.DastDAO;
+
 import net.lightbody.bmp.proxy.ProxyServer;
-import org.springframework.http.HttpStatus;
-import org.xml.sax.SAXException;
 
 @RestController
 public class DASTProxyHomeRestController {
@@ -132,7 +143,7 @@ public class DASTProxyHomeRestController {
 					AppScanConstants.APPSCAN_CONTACT_US_SUPPORT_DL);
 
 			MailUtils.sendEmail(AppScanUtils.getLoggedInUser().getUserId()
-					+ AppScanConstants.APPSCAN_JOB_SCAN_STATUS_RECEIVER,
+					+ RootConfiguration.getProperties().getProperty(AppScanConstants.EMAIL_DOMAIN),
 					AppScanConstants.APPSCAN_REPORT_SENDER,
 					AppScanConstants.JIRA_ISSUE_RAISED_SUBJECT,
 					jiraIssueRaisedMailModal, AppScanConstants.JIRA_ISSUE_RAISED_TEMPLATE);
@@ -508,19 +519,11 @@ public class DASTProxyHomeRestController {
 
 		String nameOfHTD = null;
 
-		if (!apiCall
-				&& AppScanUtils.getLoggedInUser().getUserId()
-						.equalsIgnoreCase(userId)) {
+		if (!apiCall) {
 			if (!openProxyServers.isEmpty()
-					&& openProxyServers.containsKey(AppScanUtils
-							.getLoggedInUser().getUserId())) {
-				nameOfHTD = getBrowserMobServiceBean().stopServerAndReturnHar(
-						openProxyServers.get(
-								AppScanUtils.getLoggedInUser().getUserId())
-								.getProxyServer(),
-						AppScanUtils.getLoggedInUser().getUserId(), null);
-				openProxyServers.remove(AppScanUtils.getLoggedInUser()
-						.getUserId());
+					&& openProxyServers.containsKey(userId)) {
+				nameOfHTD = getBrowserMobServiceBean().stopServerAndReturnHar(openProxyServers.get(userId).getProxyServer(),userId, null);
+				openProxyServers.remove(userId);
 			}
 		} else {
 			/*
@@ -579,10 +582,9 @@ public class DASTProxyHomeRestController {
 				AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, "success");
 	}
 
-	@RequestMapping(value = { "/rest/v1/security/{userId}" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ModelAndView setUpScan(@PathVariable final String userId)
+	@RequestMapping(value = { "/rest/v1/security/{userId}/{recordingName}" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ModelAndView setUpScan(@PathVariable final String userId, @PathVariable final String recordingName)
 			throws DASTProxyException {
-
 		String nameOfConfig = null;
 		String filePath = null;
 		Scan scan = null;
@@ -602,7 +604,6 @@ public class DASTProxyHomeRestController {
 
 			LOGGER.error("There has been an error while trying to set the scan up. The details of the error is: "
 					+ exception);
-
 			/*
 			 * This is more of a test fix. This place needs to be redesigned.
 			 * The reason here is, in case htd generation happens and ASE fails,
@@ -614,38 +615,45 @@ public class DASTProxyHomeRestController {
 						nameOfConfig);
 			} else {
 				// No htd means there has been some error
-				throw new DASTProxyException(
-						"There has been an error when trying to create an AppScan Specific Recording file (HTD file)");
+				throw new DASTProxyException("There has been an error when trying to create an AppScan Specific Recording file (HTD file)");
 			}
 		}
-
+		DastUtils dastUtils = new DastUtils();
+		//System.ou
 		// Once all the scan set up work is done, then save the scan for metric
 		// purposes.
 		scan.setSetUpViaBluefin(false);
-		dao.saveScan(scan);
-		Map<String, Object> model = new HashMap<String, Object>();
-		model.put("scanName", scan.getScanName());
-		model.put("testCaseName", scan.getTestCaseName());
-		model.put("contactUsSupportDl",
-				AppScanConstants.APPSCAN_CONTACT_US_SUPPORT_DL);
-		MailUtils.sendEmail(scan.getUser().getUserId()
-				+ AppScanConstants.APPSCAN_JOB_SCAN_STATUS_RECEIVER,
-				AppScanConstants.APPSCAN_REPORT_SENDER, scan.getScanName()
-						+ " is Successfully set up", model,
-				AppScanConstants.SCAN_SETUP_MAIL_BODY_TEMPLATE);
+		Recording recording = dastUtils.createRecording(recordingName, userId, filePath);
+		RecordingBatch recordingBatch = dao.getManualRecordingBatch(AppScanUtils.getLoggedInUser().getUserId());
 
-		return new ModelAndView(view,
-				AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, "success");
+		if ( recordingBatch == null){
+			recordingBatch = dastUtils.createRecordingBatch("Manual Test Suite", AppScanUtils.getLoggedInUser().getUserId(), true);
+			dao.saveGenericEntity(recordingBatch);
+		}
+		dao.saveScan(scan);
+		List<Scan> scans = new ArrayList<Scan>();
+		scans.add(scan);
+		ScanBatch scanBatch = dastUtils.createScanBatch(recordingBatch.getId(), AppScanUtils.getLoggedInUser().getUserId(), AppScanConstants.APPSCAN_MANUAL_TEST_SUITE, scans);
+		dao.saveGenericEntity(scanBatch);
+		scan.setRecordingId(recording.getId());
+		scan.setTestCaseName(recording.getTestcaseName());
+		recording.setRecordingBatchId(recordingBatch.getId());
+		scan.setBatch(scanBatch);
+		dao.saveScan(scan);
+		dao.saveGenericEntity(recording);
+		return new ModelAndView(view, AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, "success");
 	}
+
+
 
 	@RequestMapping(value = { "/rest/v1/selenium/dastscan" }, method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseStatus(value = HttpStatus.OK)
 	public ModelAndView setUpScanViaBluefin(
 			@RequestBody final ProxyEntity proxyEntity)
 			throws DASTProxyException {
+
 		String nameOfConfig = null;
-		if (AppScanUtils.isNotNull(proxyEntity)
-				&& AppScanUtils.isNotNull(proxyEntity.getUser())) {
+		if (AppScanUtils.isNotNull(proxyEntity) && AppScanUtils.isNotNull(proxyEntity.getUser())) {
 
 			if (LOGGER.isDebugEnabled()) {
 				LOGGER.debug("Call is from "
@@ -669,8 +677,7 @@ public class DASTProxyHomeRestController {
 				proxyEntity.getScanConfiguration().setNameOfScan(
 						proxyEntity.getTestCaseName());
 
-				for (final String configParam : proxyEntity
-						.getScanConfigurationParameters()) {
+				for (final String configParam : proxyEntity.getScanConfigurationParameters()) {
 					if (configParam
 							.equalsIgnoreCase(AppScanConstants.APPSCAN_AUTOMATIC_START_SCAN)) {
 						// startScanAutomatically = true;
@@ -707,7 +714,7 @@ public class DASTProxyHomeRestController {
 		return new ModelAndView(
 				view,
 				"data",
-				"Recording has been submitted for setting up a scan. The scan will be set up in a short while. An email will be sent to your id");
+				"Recording has been submitted for setting up a scan. The scan will be set up in a short while.");
 	}
 
 	@RequestMapping(value = { "/rest/contactus", "/rest/v1/contactus" }, method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -757,7 +764,7 @@ public class DASTProxyHomeRestController {
 											.getProperty(
 													AppScanConstants.PROPERTIES_CONTACT_US_SUPPORT_DL_IDENTIFIER),
 									AppScanUtils.getLoggedInUser().getUserId()
-											+ "@ebay.com",
+											+ RootConfiguration.getProperties().getProperty(AppScanConstants.EMAIL_DOMAIN),
 									"Contact Us Message From "
 											+ AppScanUtils.getLoggedInUser()
 													.getUserId(),
@@ -845,14 +852,193 @@ public class DASTProxyHomeRestController {
 		}
 	}
 
-	@RequestMapping(value = { "/rest/v1/scans" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	@ResponseStatus(value = HttpStatus.OK)
-	public ModelAndView getAllScans() {
+	private List<IssueVO> convertIssueEntitiestoVO(List<Issue> issues, String testcaseName){
+		List<IssueVO> issuesVO = new ArrayList<IssueVO>();
+		if (issues != null){
+			for (Issue issue : issues){
+				IssueVO issueVO = new IssueVO();
+				issueVO.setIssueId(issue.getIssuePrimaryKey().getIssueId());
+				issueVO.setIssueType(issue.getIssueType());
+				issueVO.setIssueUrl(issue.getIssueUrl());
+				issueVO.setSeverity(issue.getSeverity());
+				issueVO.setTestUrl(issue.getTestUrl());
+				issueVO.setTestcaseName(testcaseName);
+				issueVO.setReportId(issue.getIssuePrimaryKey().getReport().getReportId());
+				if (issue.getJira() != null) issueVO.setJiraURL(issue.getJira().getKey());
+				if (issue.getIssueVariants() != null && issue.getIssueVariants().size() > 0){
+					issueVO.setTestHTTPtraffic(issue.getIssueVariants().get(0).getTraffic().getTestHttpTraffic());
+					issueVO.setOrigHTTPtraffic(issue.getIssueVariants().get(0).getTraffic().getOriginalHttpTraffic());
+				}
 
-		final List<Scan> scans = dao.getAllScans();
+				//issueVO.setTestHTTPtraffic(issue.getIss); //TODO
+				issuesVO.add(issueVO);
+			}
+		}
+		return issuesVO;
+	}
+
+
+	@RequestMapping(value = { "/rest/v1/recordingbatches" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ResponseStatus(value = HttpStatus.OK)
+	public ModelAndView getRecordingBatches(){
+
+		final List<RecordingBatch> recordingBatches= dao.getRecordingBatches(AppScanUtils.getLoggedInUser().getUserId());
+		return new ModelAndView(view,
+				AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, recordingBatches);
+	}
+	@RequestMapping(value = { "/rest/v1/scanbatches" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ResponseStatus(value = HttpStatus.OK)
+	public ModelAndView getScanBatches(){
+
+		final List<ScanBatch> scanBatches= dao.getScanBatches(AppScanUtils.getLoggedInUser().getUserId());
+		for (ScanBatch batch : scanBatches){
+
+			long readyCount = batch.getScans().stream().filter(scan -> "New".equals(scan.getScanState())).count();
+			readyCount += batch.getScans().stream().filter(scan -> scan.getScanState() == null).count();
+			long runningCount = batch.getScans().stream().filter(scan -> "Running".equals(scan.getScanState())).count();
+			long suspendedCount = batch.getScans().stream().filter(scan -> "Suspended".equals(scan.getScanState())).count();
+			long completedCount = batch.getScans().stream().filter(scan -> "Ready".equals(scan.getScanState())).count();
+			batch.setDisplayStatus("Completed: " + completedCount + ", Running : " + runningCount + ", Suspended : " + suspendedCount+ ", New  : " + readyCount);
+			//Setting this to null to avoid unnecessary scans data to be emitted as JSON. We are getting the scans data from DB only for displaying the status summary.
+			batch.setScans(null);
+		}
+
+		return new ModelAndView(view, AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, scanBatches);
+	}
+
+	@RequestMapping(value = { "/scanbatch/v1/{recordingBatchId}" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ModelAndView scanBatch(@PathVariable final Long recordingBatchId)
+			throws DASTProxyException {
+		String retMessage="success";
+		Scan scan = null;
+		ScanBatch scanBatch = null;
+		List<Recording> recordings = null;
+		try {
+			RecordingBatch recBatch = dao.getRecordingBatch(recordingBatchId);
+			recordings = dao.getRecordingsByBatchId(recordingBatchId);
+			if (recordings != null){
+				if (recordings.size() > 0){
+					scanBatch = new ScanBatch();
+					scanBatch.setTestsuiteName(recBatch.getTestsuiteName());
+					scanBatch.setOwner(AppScanUtils.getLoggedInUser().getUserId());
+					scanBatch.setRecordingBatchId(recordingBatchId);
+					scanBatch.setSubsetOfBatch(false);
+					scanBatch.setDateCreated(new Date());
+					dao.saveScanBatch(scanBatch);
+				}
+				for (Recording recording: recordings){
+					scan = dastApiService.setUpScanForUser(AppScanUtils
+							.getLoggedInUser().getUserId(), AppScanUtils
+							.getLoggedInUser().getPassword(), recording.getHarFilename(), recording.getTestcaseName(), true);
+					scan.setTestCaseName(recording.getTestcaseName());
+					scan.setTestSuiteName(recording.getTestsuiteName());
+					scan.setRecordingId(recording.getId());
+					scan.setSetUpViaBluefin(false);
+					scan.setBatch(scanBatch);
+					dao.saveScan(scan);
+				}
+			}
+
+		} catch (Exception exception) {
+			retMessage="error";
+			LOGGER.error("There has been an error while trying to set the scan up (using the recording which was done earlier). The details of the error is: "+ exception);
+		}
+
 
 		return new ModelAndView(view,
-				AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, scans);
+				AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, retMessage);
+	}
+	@RequestMapping(value = { "/scanselectedrecordings/v1/{recordingIds}/{batchId}" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ModelAndView scanselectedrecordings(@PathVariable final String recordingIds, @PathVariable final Long batchId)
+			throws DASTProxyException {
+		String retMessage="success";
+		Scan scan = null;
+		ScanBatch scanBatch = null;
+		List<Recording> recordings = null;
+		try {
+			RecordingBatch recBatch = dao.getRecordingBatch(batchId);
+			//StringTokenizer tokenizer = new StringTokenizer(recordingIds, "-");
+
+			recordings = dao.getRecordingsByBatchId(batchId);
+			if (recordings != null){
+				if (recordings.size() > 0){
+					scanBatch = new ScanBatch();
+					scanBatch.setTestsuiteName(recBatch.getTestsuiteName());
+					scanBatch.setOwner(AppScanUtils.getLoggedInUser().getUserId());
+					scanBatch.setRecordingBatchId(batchId);
+					scanBatch.setSubsetOfBatch(false);
+					scanBatch.setDateCreated(new Date());
+					dao.saveScanBatch(scanBatch);
+				}
+				for (Recording recording: recordings){
+					if (!recordingIds.contains("-"+recording.getId()+"-")) continue;
+					scan = dastApiService.setUpScanForUser(AppScanUtils
+							.getLoggedInUser().getUserId(), AppScanUtils
+							.getLoggedInUser().getPassword(), recording.getHarFilename(), recording.getTestcaseName(), true);
+					scan.setTestCaseName(recording.getTestcaseName());
+					scan.setTestSuiteName(recording.getTestsuiteName());
+					scan.setRecordingId(recording.getId());
+					scan.setSetUpViaBluefin(false);
+					scan.setBatch(scanBatch);
+
+					dao.saveScan(scan);
+				}
+			}
+
+		} catch (Exception exception) {
+			retMessage="error";
+			LOGGER.error("There has been an error while trying to set the scan up (using the recording which was done earlier). The details of the error is: "+ exception);
+		}
+
+
+		return new ModelAndView(view,
+				AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, retMessage);
+	}
+	@RequestMapping(value = { "/rest/v1/issues/{scanBatchId}" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ResponseStatus(value = HttpStatus.OK)
+	public ModelAndView getIssuesOfScanBatch(@PathVariable final Long scanBatchId) {
+		
+		ScanBatch scanBatch = dao.getScanBatch(AppScanUtils.getLoggedInUser().getUserId(), scanBatchId);
+		
+		if (scanBatch == null){
+			return new ModelAndView(view,AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, new ArrayList());
+
+		}
+		List<Scan> scans = scanBatch.getScans();
+
+		List<IssueVO> issuesVO = new ArrayList<IssueVO>();
+		for (Scan scan: scans){
+			issuesVO.addAll(convertIssueEntitiestoVO(scan.getReport().getIssues(), scan.getTestCaseName()));
+		}
+
+		return new ModelAndView(view,AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, issuesVO);
+	}
+	@RequestMapping(value = { "/rest/v1/scans/{scanBatchId}" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ResponseStatus(value = HttpStatus.OK)
+	public ModelAndView getScans(@PathVariable final Long scanBatchId) {
+
+		ScanBatch scanBatch = dao.getScanBatch(AppScanUtils.getLoggedInUser().getUserId(), scanBatchId);
+		
+		if (scanBatch == null){
+			return new ModelAndView(view,AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, new ArrayList());
+
+		}
+		List<Scan> scans = scanBatch.getScans();
+		
+		for (Scan scan : scans){
+			scan.setBatch(null);
+		}
+
+		return new ModelAndView(view,AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, scans);
+	}
+
+	@RequestMapping(value = { "/rest/v1/recordings/{recordingBatchId}" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ModelAndView getRecordingsByBatchId(@PathVariable final Long recordingBatchId)
+			throws DASTProxyException {
+		List<Recording> recordings = null;
+		recordings = dao.getRecordingsByBatchId(recordingBatchId);
+
+		return new ModelAndView(view, AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, recordings);
 	}
 
 	/**

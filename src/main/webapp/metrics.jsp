@@ -14,7 +14,7 @@
 	<meta name="author" content="">
 	<link rel="icon" href="images/Interceptor.ico">
 	
-	<title>DASTProxy v2.0</title>
+	<title>DASTProxy v3.0</title>
 	
 	<!-- Bootstrap core CSS -->
 	<link href="css/bootstrap.min.css" rel="stylesheet">
@@ -54,7 +54,7 @@
 
 				<span class="navbar-brand"> <img
 					style="max-width: 40px; max-heigth: 40px; margin-top: -7px;"
-					src="images/imageMagnifier.jpg" /> <span>DAST Proxy <sup>Beta</sup></span>
+					src="images/imageMagnifier.jpg" /> <span>DAST Proxy 3.0</span>
 
 				</span>
 			</div>

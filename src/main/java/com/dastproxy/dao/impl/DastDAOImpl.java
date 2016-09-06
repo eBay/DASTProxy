@@ -8,22 +8,35 @@
 
 package com.dastproxy.dao.impl;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
-import com.dastproxy.common.constants.AppScanConstants;
-import com.dastproxy.dao.DastDAO;
-import com.dastproxy.model.Issue;
-import com.dastproxy.model.ProxyEntity;
-import com.dastproxy.model.Report;
-import com.dastproxy.model.Scan;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Service;
+import java.util.Map;
+
+import org.hibernate.Criteria;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
+import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+
+import com.dastproxy.common.constants.AppScanConstants;
+import com.dastproxy.dao.DastDAO;
+import com.dastproxy.model.BreezeScanVO;
+import com.dastproxy.model.Issue;
+import com.dastproxy.model.ProxyEntity;
+import com.dastproxy.model.Recording;
+import com.dastproxy.model.RecordingBatch;
+import com.dastproxy.model.Report;
+import com.dastproxy.model.Scan;
+import com.dastproxy.model.ScanBatch;
 
 @Service
 @Qualifier("dastDAOImpl")
@@ -56,8 +69,7 @@ public class DastDAOImpl implements DastDAO {
 	 */
 	public List<ProxyEntity> getEntities() {
 		final Session session = this.sessionFactory.openSession();
-		final List<ProxyEntity> entities = session.createCriteria(
-				ProxyEntity.class).list();
+		final List<ProxyEntity> entities = session.createCriteria(ProxyEntity.class).list();
 		session.close();
 		return entities;
 	}
@@ -95,6 +107,19 @@ public class DastDAOImpl implements DastDAO {
 		final List<Scan> scans = session
 				.createQuery("from Scan scan where toBeTracked = :toBeTracked")
 				.setParameter("toBeTracked", true).list();
+		session.close();
+		return scans;
+	}
+
+	public List<Scan> getRecentScansWithTestsuiteNameAndSameOwner(String testSuiteName, String owner) {
+		final Session session = this.sessionFactory.openSession();
+		final List<Scan> scans = session
+				.createQuery("from Scan scan where toBeTracked = :toBeTracked and testSuiteName = :testSuiteName and user.userId = :userId and breezeUniqueTS is not null and breezeUniqueTS > :breezeUniqueTS")
+				.setParameter("toBeTracked", true)
+				.setParameter("testSuiteName", testSuiteName)
+				.setParameter("userId", owner)
+				.setParameter("breezeUniqueTS", System.currentTimeMillis() - (15 * 60 * 1000))
+				.list();
 		session.close();
 		return scans;
 	}
@@ -265,5 +290,133 @@ public class DastDAOImpl implements DastDAO {
 		transaction.commit();
 		session.close();
 		
+	}
+
+	/**
+	 *  Save a recording
+	 */
+	@Override
+	public void saveGenericEntity(Object entity){
+		final Session session = this.sessionFactory.openSession();
+		final Transaction transaction = session.beginTransaction();
+		session.saveOrUpdate(entity);
+		transaction.commit();
+		session.close();
+
+	}
+
+	public List<Recording> getAllRecordings(){
+		final Session session = this.sessionFactory.openSession();
+		final List<Recording> recordings = session.createCriteria(Recording.class).addOrder( Order.desc("dateCreated") ).list();
+		session.close();
+		return recordings;
+
+	}
+	public Recording getRecording(Long recordingId){
+		final Session session = this.sessionFactory.openSession();
+		final Recording recording = session.get(Recording.class, recordingId);
+		session.close();
+		return recording;
+
+	}
+
+	public List<Scan> getScansByUser(String userId){
+		final Session session = this.sessionFactory.openSession();
+		final List<Scan> scans = session.createQuery("from Scan scan where scan.user.userId = :user_id and scan.setUpViaBluefin is false order by scan.firstSetUp desc")
+				.setParameter("user_id", userId).list();
+		Comparator<Scan> byScanIdcomparator = (Scan s1, Scan s2)->s2.getScanId().compareTo(s1.getScanId());
+		scans.sort(byScanIdcomparator);
+		session.close();
+		return scans;
+
+	}
+
+	public Scan getScan(String scanId){
+		final Session session = this.sessionFactory.openSession();
+		final Scan scan = session.get(Scan.class, scanId);
+		session.close();
+		return scan;
+	}
+
+	public List<RecordingBatch> getRecordingBatches(String owner){
+		final Session session = this.sessionFactory.openSession();
+		final List<RecordingBatch> recordingBatches = session.createCriteria(RecordingBatch.class)
+					.add(Restrictions.eq("owner", owner))
+					.addOrder(Order.desc("manualTestBatch"))
+					.addOrder(Order.desc("dateCreated"))
+					.list();
+		session.close();
+		return recordingBatches;
+	}
+	public RecordingBatch getManualRecordingBatch(String owner){
+		final Session session = this.sessionFactory.openSession();
+		RecordingBatch batch = (RecordingBatch)session.createQuery("from RecordingBatch batch where batch.manualTestBatch is true and owner = :userId")
+				.setParameter("userId", owner).uniqueResult();
+		session.close();
+		return batch;
+	}
+	public RecordingBatch getRecBatchByTsDynamicIdentifier(String owner, String tsDynIdentifier){
+
+		final Session session = this.sessionFactory.openSession();
+		RecordingBatch batch = (RecordingBatch)session.createQuery("from RecordingBatch batch where owner=:userId and testsuiteDynamicIdentifier=:tsDynIdentifier")
+				.setParameter("userId", owner)
+				.setParameter("tsDynIdentifier", tsDynIdentifier)
+				.uniqueResult();
+		session.close();
+		return batch;
+	}
+
+	public ScanBatch getScanBatchByRecordingBatchId(String owner, Long recordingBatchId){
+
+		final Session session = this.sessionFactory.openSession();
+		ScanBatch batch = (ScanBatch)session.createQuery("from ScanBatch batch where owner=:userId and recordingBatchId=:recordingBatchId")
+				.setParameter("userId", owner)
+				.setParameter("recordingBatchId", recordingBatchId)
+				.uniqueResult();
+		session.close();
+		return batch;
+
+	}
+
+	public List<ScanBatch> getScanBatches(String owner){
+		final Session session = this.sessionFactory.openSession();
+		//final List<ScanBatch> scanBatches = session.createQuery("from ScanBatch scanBatch where scanBatch.owner = :user_id order by scanBatch.dateCreated desc")
+		final List<ScanBatch> scanBatches = session.createCriteria(ScanBatch.class).add(Restrictions.eq("owner", owner)).addOrder( Order.desc("dateCreated") ).setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY).list();
+		session.close();
+		return scanBatches;
+	}
+
+	public List<Recording> getRecordingsByBatchId(Long recordingBatchId){
+		final Session session = this.sessionFactory.openSession();
+		final List<Recording> recordings = session.createQuery("from Recording recording where recording.recordingBatchId = :recordingBatchId order by dateCreated desc")
+				.setParameter("recordingBatchId", recordingBatchId).list();
+		session.close();
+		return recordings;
+
+	}
+
+	public RecordingBatch getRecordingBatch(Long id){
+		final Session session = this.sessionFactory.openSession();
+		RecordingBatch batch = (RecordingBatch)session.createCriteria(RecordingBatch.class).add(Restrictions.eq("id", id)).uniqueResult();
+		session.close();
+		return batch;
+
+	}
+
+	public void saveScanBatch(ScanBatch scanBatch){
+		final Session session = this.sessionFactory.openSession();
+		final Transaction transaction = session.beginTransaction();
+		session.saveOrUpdate(scanBatch);
+		transaction.commit();
+		session.close();
+	}
+
+	public ScanBatch getScanBatch(String userId, Long id){
+		final Session session = this.sessionFactory.openSession();
+		//final List<ScanBatch> scanBatches = session.createQuery("from ScanBatch scanBatch where scanBatch.owner = :user_id order by scanBatch.dateCreated desc")
+		final ScanBatch scanBatch = (ScanBatch)session.createCriteria(ScanBatch.class).add(Restrictions.eq("id", id)).add(Restrictions.eq("owner", userId)).setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY).setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY).uniqueResult();
+		session.close();
+		return scanBatch;
+
 	}
 }

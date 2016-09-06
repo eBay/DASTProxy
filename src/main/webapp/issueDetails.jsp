@@ -40,7 +40,7 @@
     <![endif]-->
 
 
-<title>DASTProxy v2.0</title>
+<title>DASTProxy v3.0</title>
 </head>
 
 <body>
@@ -296,8 +296,7 @@
 			<div class="modal-content">
 				<div class="modal-header">
 					<h4 class="modal-title">
-						<b id="dastProxyProgessModalTital">Publish security bug to
-							eBay JIRAP Project </b>
+						<b id="dastProxyProgessModalTital">Publish security bug to JIRA Project </b>
 					</h4>
 				</div>
 				<div class="modal-body">
@@ -308,13 +307,11 @@
 						for your project before trying to publish an issue.
 					</div>
 					<div class="form-group">
-						<label for="nameOfSpiderScan" class="control-label">eBay
-							Jira Project Key:</label> <input type="text" class="form-control"
-							id="jiraProjectKey" placeholder="Enter the eBay JIRA Project key">
+						<label for="nameOfSpiderScan" class="control-label">Jira Project Key:</label> <input type="text" class="form-control" id="jiraProjectKey" placeholder="Enter the JIRA Project key">
 					</div>
 
 					<div id="jiraProjectDisplayDiv" style="display: none">
-						https://jirap.corp.ebay.com/jira/browse/<span id="jiraProjectSpan"></span>
+						https://JIRA_URL.com/jira/browse/<span id="jiraProjectSpan"></span>
 					</div>
 					<!-- <img width="100%" height="100%" src="images/comingSoon.png" />
 					 -->

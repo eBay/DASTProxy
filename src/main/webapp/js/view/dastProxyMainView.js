@@ -95,15 +95,14 @@ var view = {
 			$(elementId).hide();
 		},
 		
-		updateProxyDetailsView : function(proxyHost, proxyPort,emailId) {
+		updateProxyDetailsView : function(proxyHost, proxyPort,userId) {
 
 			$(ID_PROXY_HOST_DETAILS).text(proxyHost);
 			$(ID_PROXY_PORT_DETAILS).text(proxyPort);
 			
-			if(emailId){
-				$("#contactProxyPerson").text("(Email Id: "+emailId+"@ebay.com)");
+			if(userId){
+				$("#contactProxyPerson").text("(User Id: "+userId+")");
 			}
-			
 		},
 		
 		showRecordStartedDialog : function(){

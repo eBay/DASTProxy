@@ -23,6 +23,7 @@
  */
 
 var loggedInUser;
+var recordingName;
 
 // Handler for .ready() called.
 $(document).ready(function() {
@@ -47,7 +48,7 @@ $(document).ready(function() {
 		if(optionSelected === ID_SET_UP_SCAN_ON_APPSCAN){
 			
 			view.showApplicationPrgoressModalWindow("Setting Up a Scan on IBM AppScan Enterprise for " + loggedInUser.userId,"50%");
-			var responseObject = model.getScanSetUp(loggedInUser.userId);			
+			var responseObject = model.getScanSetUp(loggedInUser.userId, recordingName);
 			if(responseObject.error == null || responseObject.error == undefined ){
 				view.closeModalWindow(ID_APPLICATION_PROGRESS_BAR_MODAL_WINDOW);
 				view.showDialog(ID_APPLICATION_SCAN_SET_UP_SUCCESSFUL_NOTIFICATION_DIALOG, true);
@@ -194,7 +195,6 @@ function actionOnSetUpProxy(emailId) {
 	var proxyIdentificationEntity = new Object();
 	proxyIdentificationEntity.user = loggedInUser;
 	proxyIdentificationEntity.proxyIdentifier = emailId;
-
 	var proxyDetailsResponse = model.getProxy(proxyIdentificationEntity);
 
 	if (proxyDetailsResponse !== null && proxyDetailsResponse !== undefined && proxyDetailsResponse.proxy !== null && proxyDetailsResponse.proxy !== undefined && proxyDetailsResponse.proxy.proxyAddress !== null && proxyDetailsResponse.proxy.proxyPort !== null) {

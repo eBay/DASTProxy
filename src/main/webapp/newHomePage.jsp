@@ -15,12 +15,13 @@
 <meta name="author" content="">
 <link rel="icon" href="images/Interceptor.ico">
 
-<title>DASTProxy v2.0</title>
+<title>DASTProxy v3.0</title>
 
 <!-- Bootstrap core CSS -->
 <link href="css/bootstrap.min.css" rel="stylesheet">
 
 <!-- Custom styles for this template -->
+<link href="css/main.css" rel="stylesheet">
 <link href="css/sticky-footer-navbar.css" rel="stylesheet">
 <link href="css/dastProxyBootstrapCustom.css" rel="stylesheet">
 
@@ -53,16 +54,14 @@
 
 				<span class="navbar-brand"> <img
 					style="max-width: 40px; max-heigth: 40px; margin-top: -7px;"
-					src="images/imageMagnifier.jpg" /> <span>DAST Proxy <sup>Beta</sup></span>
+					src="images/imageMagnifier.jpg" /> <span>DAST Proxy 3.0</span>
 
 				</span>
 			</div>
 			<div class="collapse navbar-collapse">
 				<ul class="nav navbar-nav">
-					<li id="recordedScanTab" class="active pointerCursor"><a
-						id="recordedScanTabLink">Recorded Scan</a></li>
-					<!-- <li id="spiderScanTab" class="pointerCursor"><a
-						id="spiderScanTabLink">Spider Scan</a></li> -->
+					<li id="recordedScanTab" class="active pointerCursor"><a id="recordedScanTabLink" href="/DASTProxy">Home</a></li>
+					<li id="spiderScanTab" class="pointerCursor"><a id="spiderScanTabLink" href="/DASTProxy/dashboard">Dashboard</a></li>
 				</ul>
 
 				<ul class="nav navbar-nav navbar-right">
@@ -85,16 +84,13 @@
 
 		<div class="page-header">
 			<h1>
-				Welcome to DAST Proxy <sup>Beta</sup>
-				<version> v2.0 </version>
+				Welcome to DAST Proxy 3.0</sup>
 			</h1>
 		</div>
 		<p class="lead leadBottom">
 
 			Option #1: Record the subset of pages that you want tested <span>
-				Please configure your browser/selenium proxy to the following. To
-				learn how to configure, click <a href="https://wiki.vip.corp.ebay.com/display/SENA/2.+How+to+complete+manual+flow-based+testing+with+AppScan+Enterprise+and+DAST+Proxy" 
-				target="_blank">here</a>: </span> <span id="proxyValues"
+				Please configure your browser/selenium proxy to the following. </span> <span id="proxyValues"
 				class="proxyValues"> <span> <span> Proxy Host:
 				</span><span data-original-title="Tooltip"
 					title="This is the IP address of the proxy's server" id="proxyHost">
@@ -104,8 +100,9 @@
 					title="This is the port on which the proxy is listening to HTTP/HTTPS traffic"
 					id="proxyPort"></span>
 			</span>
-			</span> <span id="startRecordingSpan"> <span> To start
-					recording please press the below button: </span>
+			</span> <span id="startRecordingSpan"> 
+			<span> Please specify a name if you wish to name your recording (Test Case Name): <input id="recording_name" type="text" maxlength="45"></input> </span>
+			<span> To start recording please press the below button: </span>
 
 				<button type="button" id="proxyRecordAction" data-toggle="tooltip"
 					data-placement="bottom"
@@ -137,8 +134,7 @@
 
 		<div class="page-header">
 			<h1>
-				Welcome to DAST Proxy <sup>Beta</sup>
-				<version> v2.0 </version>
+				Welcome to DAST Proxy 3.0
 			</h1>
 		</div>
 
@@ -253,9 +249,7 @@
 						<b>Scan Set Up Successful</b>
 					</h4>
 				</div>
-				<div class="modal-body">Scan has been set up on your account
-					in IBM AppScan Enterprise. You will also receive a mail that has a
-					link to your scan.</div>
+				<div class="modal-body">Scan has been set up on your account. Please visit the Dashboard (from main menu) to check the status.</div>
 			</div>
 			<!-- /.modal-content -->
 		</div>

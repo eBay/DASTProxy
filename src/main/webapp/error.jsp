@@ -14,7 +14,7 @@
 	<meta name="author" content="">
 	<link rel="icon" href="images/Interceptor.ico">
 	
-	<title>DASTProxy v2.0</title>
+	<title>DASTProxy v3.0</title>
 	
 	<!-- Bootstrap core CSS -->
 	<link href="css/bootstrap.min.css" rel="stylesheet">
@@ -39,7 +39,6 @@
 </head>
 
 <body>
-
 	<!-- Fixed navbar -->
 	<div class="navbar navbar-default navbar-fixed-top" role="navigation">
 		<div class="container">
@@ -53,7 +52,7 @@
 
 				<span class="navbar-brand"> <img
 					style="max-width: 40px; max-heigth: 40px; margin-top: -7px;"
-					src="images/imageMagnifier.jpg" /> <span>DAST Proxy <sup>Beta</sup></span>
+					src="images/imageMagnifier.jpg" /> <span>DAST Proxy 3.0</span>
 
 				</span>
 			</div>
@@ -75,13 +74,10 @@
 				</center>
 				<center>
 					<div class="alert alert-warning" role="alert">
-							We have noticed that QA NT account have been getting locked out. Please go to <a href="https://pet.vip.ebay.com" 
-				target="_blank">PET</a> to reset your password, if this issue persists.
 					</div>
 				</center>
 				<center>
 					<div class="alert alert-warning" role="alert">
-							In case this is your first time accessing DASTProxy, please join DL-eBay-DAST (eBay users only) for access (automated enrollment).
 					</div>
 				</center>
 		</div>

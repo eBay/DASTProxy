@@ -123,6 +123,9 @@
 				<value>com.dastproxy.model.jira.Reporter</value>
 				<value>com.dastproxy.model.jira.JiraIssueRequest</value>
 				<value>com.dastproxy.model.jira.JiraIssueResponse</value>
+			<value>com.dastproxy.model.Recording</value>
+				<value>com.dastproxy.model.RecordingBatch</value>
+				<value>com.dastproxy.model.ScanBatch</value>
 			</list>
 		</property>
 		<property name="hibernateProperties">

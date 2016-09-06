@@ -17,9 +17,18 @@ import java.net.MalformedURLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import javax.inject.Inject;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
 import com.dastproxy.common.constants.AppScanConstants;
 import com.dastproxy.common.utils.AppScanUtils;
 import com.dastproxy.common.utils.MailUtils;
@@ -29,15 +38,11 @@ import com.dastproxy.model.Issue;
 import com.dastproxy.model.Report;
 import com.dastproxy.model.Scan;
 import com.dastproxy.services.impl.AppScanEnterpriseRestService;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
 
 @Service
 public class ScanStatusNotifier {
 
-	private static final Logger LOGGER = LogManager
-			.getLogger(ScanStatusNotifier.class.getName());
+	private static final Logger LOGGER = LogManager.getLogger(ScanStatusNotifier.class.getName());
 	private DASTApiService dastApiService = new AppScanEnterpriseRestService();
 
 	@Inject
@@ -87,8 +92,9 @@ public class ScanStatusNotifier {
 				AppScanConstants.APPSCAN_CONTACT_US_SUPPORT_DL);
 
 		// Send email using Mail Utils
+
 		MailUtils.sendEmail(userId
-				+ AppScanConstants.APPSCAN_JOB_SCAN_STATUS_RECEIVER,
+				+ RootConfiguration.getProperties().getProperty(AppScanConstants.EMAIL_DOMAIN),
 				AppScanConstants.APPSCAN_REPORT_SENDER,
 				AppScanConstants.APPSCAN_STATUS_FOR_SCAN + " \"" + scanName
 						+ "\"", model,
@@ -110,127 +116,97 @@ public class ScanStatusNotifier {
 
 		// Send email using Mail Utils
 		MailUtils.sendEmail(userId
-				+ AppScanConstants.APPSCAN_JOB_SCAN_STATUS_RECEIVER,
+				+ RootConfiguration.getProperties().getProperty(AppScanConstants.EMAIL_DOMAIN),
 				AppScanConstants.APPSCAN_REPORT_SENDER,
 				AppScanConstants.APPSCAN_REPORT_FOR_SCAN + " \"" + scanName
 						+ "\"", model,
 				AppScanConstants.REPORT_MAIL_BODY_TEMPLATE);
 	}
 
-	@Scheduled(cron = "0 0/1 * * * ?")
+
+	@Scheduled(fixedRate = 120000)
 	public void scheduleJob() {
 		LOGGER.debug("Running ScanStatusNotifier");
-		if (RootConfiguration.getProperties()
-				.getProperty(AppScanConstants.PROPERTIES_RUN_CRON_JOBS)
-				.equalsIgnoreCase("true")) {
+
+		if (RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_RUN_CRON_JOBS).equalsIgnoreCase("true")) {
 			try {
+				dastApiService.loginToDASTScanner(RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_ID_IDENTIFIER),
+								RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_PWD_IDENTIFIER));
+				final List<Scan> listOfScansToBeTracked = getDao().getScansToBeTracked();
 
-				dastApiService
-						.loginToDASTScanner(
-								RootConfiguration
-										.getProperties()
-										.getProperty(
-												AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_ID_IDENTIFIER),
-								RootConfiguration
-										.getProperties()
-										.getProperty(
-												AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_PWD_IDENTIFIER));
-
-				final List<Scan> listOfScansToBeTracked = getDao()
-						.getScansToBeTracked();
+				if (listOfScansToBeTracked != null) LOGGER.debug("Running ScanStatusNotifier..listOfScansToBeTracked="+listOfScansToBeTracked.size());
 				for (Scan eScan : listOfScansToBeTracked) {
-
-					final String userId = dastApiService
-							.checkIfUserPresent(eScan.getUser().getUserId());
-
+					//The following is a duplicate try, have to fix it. But if an exception is thrown while updating a status it is not processing the remaining transactions.
+					// Temporary fix. Need to optimize the try-catch statements in this method - Srinivas
+					try{
+					String userId = dastApiService.checkIfUserPresent(eScan.getUser().getUserId());
+					LOGGER.debug("1..userId="+userId);
+					/*
 					if (!AppScanUtils.isNotNull(userId)) {
-						eScan.setToBeTracked(false);
-						getDao().saveScan(eScan);
+						dastApiService.loginToDASTScanner(RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_ID_IDENTIFIER),
+								RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_PWD_IDENTIFIER));
+						userId = dastApiService.checkIfUserPresent(eScan.getUser().getUserId());
+					}
+					*/
+					boolean isScanNotPresentForUser = dastApiService.checkIfScanIsNotPresentForUser(userId,eScan.getScanId());
+					LOGGER.debug("1..checkIfScanIsNotPresentForUser="+isScanNotPresentForUser);
+					/*
+					if (isScanNotPresentForUser){
+						dastApiService.loginToDASTScanner(RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_ID_IDENTIFIER),
+								RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_PWD_IDENTIFIER));
+						try {
+							isScanNotPresentForUser = dastApiService.checkIfScanIsNotPresentForUser(userId,eScan.getScanId());
+						} catch (Exception e){
+							isScanNotPresentForUser = true;
+						}
+					}
+					LOGGER.debug("2..userId="+userId);
+					LOGGER.debug("2..checkIfScanIsNotPresentForUser="+isScanNotPresentForUser);
+					*/
 
-					} else {
-						final String checkForScanId = eScan.getScanId();
-						if (dastApiService.checkIfScanIsPresentForUser(userId,
-								checkForScanId)) {
-							eScan.setToBeTracked(false);
-							getDao().saveScan(eScan);
-						} else {
-							final String scanState = dastApiService
-									.checkForScanStarted(checkForScanId);
-							if (scanState
-									.equals(AppScanConstants.APPSCAN_JOB_SCAN_STATE_SUSPENDED)) {
-								sendEmailForScanStatusToUser(
-										eScan.getUser().getUserId(),
-										checkForScanId,
-										eScan.getScanName(),
-										AppScanConstants.APPSCAN_JOB_SCAN_STATE_SUSPENDED,
-										userId);
+					if (!AppScanUtils.isNotNull(userId) || isScanNotPresentForUser) {
+						//eScan.setToBeTracked(false);
+						//getDao().saveScan(eScan);
+						continue;
+					}
+					final String scanState = dastApiService.checkForScanStarted(eScan.getScanId());
+
+					if (scanState.equals(AppScanConstants.APPSCAN_JOB_SCAN_STATE_SUSPENDED)) {
+						//sendEmailForScanStatusToUser(eScan.getUser().getUserId(),checkForScanId,eScan.getScanName(),AppScanConstants.APPSCAN_JOB_SCAN_STATE_SUSPENDED,userId);
 								eScan.setScanState(scanState);
 								eScan.setToBeTracked(false);
 								getDao().saveScan(eScan);
-							} else {
-								if (scanState
-										.equals(AppScanConstants.APPSCAN_JOB_SCAN_STATE_RUNNING)
-										&& !eScan.isEmailSent()) {
-									sendEmailForScanStatusToUser(
-											eScan.getUser().getUserId(),
-											checkForScanId,
-											eScan.getScanName(),
-											AppScanConstants.APPSCAN_JOB_SCAN_STATE_RUNNING,
-											userId);
+					} else if (scanState.equals(AppScanConstants.APPSCAN_JOB_SCAN_STATE_RUNNING)) {
+						//sendEmailForScanStatusToUser(eScan.getUser().getUserId(),checkForScanId,eScan.getScanName(),AppScanConstants.APPSCAN_JOB_SCAN_STATE_RUNNING,userId);
+						if (!eScan.getScanState().equals(AppScanConstants.APPSCAN_JOB_SCAN_STATE_RUNNING)){
 									eScan.setScanState(scanState);
-									eScan.setEmailSent(true);
 									getDao().saveScan(eScan);
-								} else {
-									final String latestLastRunForScan = dastApiService
-											.getLatestRunForScan(checkForScanId);
-									if (AppScanUtils
-											.isNotNull(latestLastRunForScan)
-											&& !latestLastRunForScan
-													.equalsIgnoreCase(eScan
-															.getScanLastRun())) {
+						}
+					} else if (scanState.equals(AppScanConstants.APPSCAN_JOB_SCAN_STATE_READY)){
+						LOGGER.debug("Updating the report as the scan jod is finished in the backend...scanId="+eScan.getScanId());
+						final String latestLastRunForScan = dastApiService.getLatestRunForScan(eScan.getScanId());
+						LOGGER.debug("Updating the report...latestLastRunForScan="+latestLastRunForScan);
+						LOGGER.debug("Updating the report...eScan.getScanLastRun()="+eScan.getScanLastRun());
 
-										final String latestLastRunForScanReport = dastApiService
-												.getLatestRunForScanReport(eScan
-														.getReport()
-														.getReportId());
-										final String lastRunForScanReport = eScan
-												.getReport().getReportLastRun();
-										if (AppScanUtils
-												.isNotNull(latestLastRunForScanReport)
-												&& !latestLastRunForScanReport
-														.equalsIgnoreCase(lastRunForScanReport)) {
+						if (AppScanUtils.isNotNull(latestLastRunForScan) && !latestLastRunForScan.equalsIgnoreCase(eScan.getScanLastRun())) {
+							LOGGER.debug("Updating the report...eScan.getReport().getReportId()="+eScan.getReport().getReportId());
 
-											if (AppScanUtils
-													.isNotNull(dastApiService
-															.getReport(eScan
-																	.getReport()
-																	.getReportId()))) {
+							final String latestLastRunForScanReport = dastApiService.getLatestRunForScanReport(eScan.getReport().getReportId());
+							final String lastRunForScanReport = eScan.getReport().getReportLastRun();
+							LOGGER.debug("Updating the report...latestLastRunForScanReport="+latestLastRunForScanReport);
 
-												Report scanReport = eScan
-														.getReport();
-												scanReport
-														.setIssues(dastApiService
-																.getIssuesFromReport(
-																		checkForScanId,
-																		eScan.getReport(),
-																		dastApiService
-																				.getReport(eScan
-																						.getReport()
-																						.getReportId())));
+							if (AppScanUtils.isNotNull(latestLastRunForScanReport)&& !latestLastRunForScanReport.equalsIgnoreCase(lastRunForScanReport)) {
+								String reportFromScanEngine = dastApiService.getReport(eScan.getReport().getReportId());
+								LOGGER.debug("Updating the report...reportFromScanEngine="+reportFromScanEngine);
 
-												List<Issue> issuesInScan = AppScanUtils
-														.returnDASTProxyRelativeUrlIssueList(scanReport);
-												sendReportAfterScanCompleteToUser(
-														eScan.getUser()
-																.getUserId(),
-														checkForScanId,
-														eScan.getScanName(),
-														AppScanConstants.APPSCAN_JOB_SCAN_STATE_COMPLETED,
-														userId, issuesInScan,
-														eScan.getTestCaseName());
-												eScan.getReport()
-														.setReportLastRun(
-																latestLastRunForScanReport);
+								if (AppScanUtils.isNotNull(reportFromScanEngine)) {
+									LOGGER.debug("Updating the report...");
+									Report scanReport = eScan.getReport();
+									scanReport.setIssues(dastApiService.getIssuesFromReport(eScan.getScanId(),eScan.getReport(),reportFromScanEngine));
+									List<Issue> issuesInScan = AppScanUtils.returnDASTProxyRelativeUrlIssueList(scanReport);
+									if (!eScan.isSetUpViaBluefin())
+									sendReportAfterScanCompleteToUser(eScan.getUser().getUserId(),eScan.getScanId(),eScan.getScanName(),AppScanConstants.APPSCAN_JOB_SCAN_STATE_COMPLETED,userId, issuesInScan,eScan.getTestCaseName());
+									eScan.getReport().setReportLastRun(latestLastRunForScanReport);
 												eScan.setEmailSent(false);
 												eScan.setScanLastRun(latestLastRunForScan);
 												eScan.setScanState(scanState);
@@ -241,27 +217,22 @@ public class ScanStatusNotifier {
 										}
 									}
 								}
-
-							}
-
-						}
+					} catch (MalformedURLException exception) {
+						LOGGER.error("A " + exception.getClass().getSimpleName()+ " has occured in the application in the scheduler. ",exception);
+					} catch (Exception exception) {
+						LOGGER.error("A " + exception.getClass().getSimpleName()+ " has occured in the application in the scheduler. ",exception);
+						AppScanUtils.sendErrorMail(exception);
 					}
-
 				}
 
 			} catch (MalformedURLException exception) {
-				LOGGER.error("A " + exception.getClass().getSimpleName()
-						+ " has occured in the application in the scheduler. ",
-						exception);
+				LOGGER.error("A " + exception.getClass().getSimpleName()+ " has occured in the application in the scheduler. ",exception);
 			} catch (Exception exception) {
-				LOGGER.error("A " + exception.getClass().getSimpleName()
-						+ " has occured in the application in the scheduler. ",
-						exception);
+				LOGGER.error("A " + exception.getClass().getSimpleName()+ " has occured in the application in the scheduler. ",exception);
 				AppScanUtils.sendErrorMail(exception);
 			}
 		} else {
 			LOGGER.debug("Cron Jobs have been disabled. Exitting from ScanStatusNotifier");
 		}
-
 	}
 }

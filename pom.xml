@@ -3,7 +3,6 @@
 	This would enable new developers to understand why a particular jar has been 
 	imported (or excluded). @author Kiran Shirali (kshirali@ebay.com) -->
 
-
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
@@ -304,18 +303,18 @@
 		<!-- @author kshirali@ebay.com Adding a plugin for dependency check. Will 
 			keep it commented so that it doesn't impact all builds. -->
 		<plugins>
-			<plugin>
+			<!--plugin>
 				<groupId>org.owasp</groupId>
 				<artifactId>dependency-check-maven</artifactId>
 				<version>${org.owasp.dependency-check-maven.version}</version>
-				<executions>
-					<execution>
-						<goals>
+<executions>
+<execution>
+<goals>
 							<goal>check</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
+</goals>
+</execution>
+</executions>
+			</plugin-->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>

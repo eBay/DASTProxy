@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -26,19 +27,24 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.net.UnknownHostException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.StringTokenizer;
+
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import javax.xml.XMLConstants;
 import javax.xml.namespace.NamespaceContext;
 import javax.xml.parsers.DocumentBuilder;
@@ -49,16 +55,11 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-import java.security.cert.X509Certificate;
-import javax.net.ssl.X509TrustManager;
-import net.lightbody.bmp.core.har.copy.Har;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.http.protocol.HTTP;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
@@ -69,6 +70,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
+
 import com.dastproxy.common.constants.AppScanConstants;
 import com.dastproxy.common.utils.AppScanUtils;
 import com.dastproxy.configuration.RootConfiguration;
@@ -84,7 +86,11 @@ import com.dastproxy.model.Traffic;
 import com.dastproxy.model.User;
 import com.dastproxy.services.DASTApiService;
 import com.dastproxy.services.ScanStatusNotifier;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import net.lightbody.bmp.core.har.copy.Har;
 @Service
 @Qualifier("appScanEnterpriseRestService")
 public class AppScanEnterpriseRestService implements DASTApiService {
@@ -95,7 +101,7 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 
 	// This will be used to hold any cookie that comes with the response from
 	// ASE.
-	private String cookieContainer = "";
+	private static String cookieContainer = "";
 	private String templateId;
 	private String userFolderId;
 
@@ -227,9 +233,7 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 			throws ParserConfigurationException, IOException, SAXException,
 			DASTProxyException {
 
-		LOGGER.debug(
-				"Inside AppScanEnterpriseRestService.loginToDASTScanner. Logged in user is: {}",
-				userName);
+		LOGGER.debug("Inside AppScanEnterpriseRestService.loginToDASTScanner. Logged in user is: {}",userName);
 
 		// Initialization of XPath utilities
 		final XPathFactory factory = XPathFactory.newInstance();
@@ -240,15 +244,7 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 		 * NOTE: In case NTLM authentication doesn't work for ASE, the following
 		 * is code for ASE.
 		 */
-		String credentialsToBePosted = "userid="
-				+ RootConfiguration
-						.getProperties()
-						.get(AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_ID_IDENTIFIER)
-				+ "&password="
-				+ RootConfiguration
-						.getProperties()
-						.get(AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_PWD_IDENTIFIER);
-
+		String credentialsToBePosted = "userid="+userName+"&password="+password;
 		Document response;
 
 		/**
@@ -260,11 +256,11 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 		 */
 		boolean secondRequestAlreadySent = false;
 		try {
-
 			LOGGER.debug("Sending first request to get user and version info. This will check if the user is logged in or not");
-			response = sendRESTRequestToASE("", null, true);
+			response = sendRESTRequestToASE("", null);
 
 		} catch (Exception exception) {
+			exception.printStackTrace();
 			LOGGER.error(
 					"There was an error when sending the first request to get user and version info. Assuming that the user is not logged in. The details of the error are are: ",
 					exception);
@@ -285,27 +281,25 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 			 * 
 			 * }
 			 */
-			response = sendRESTRequestToASE(
-					AppScanConstants.APPSCAN_USERS_LOGIN, credentialsToBePosted);
+			response = sendRESTRequestToASE(AppScanConstants.APPSCAN_USERS_LOGIN, credentialsToBePosted);
 		}
-
 		/**
 		 * TODO This check is a temporary fix for ASE timing out error. If the
 		 * first request is not honored because of timeout, send a request
 		 * again. Once ASE has fixed the issue we can remove this check.
 		 * 
 		 */
-		if ("error"
-				.equalsIgnoreCase(response.getDocumentElement().getTagName())
-				&& !secondRequestAlreadySent) {
+		LOGGER.error("response.getDocumentElement().getTagName()");
+		
+		if ("error".equalsIgnoreCase(response.getDocumentElement().getTagName())&& !secondRequestAlreadySent) {
 			LOGGER.error("The first call to ASE has resulted in an error XML being sent back. Sending log in request again.");
 			// Relogging in. So removing any cookie information.
 			cookieContainer = "";
-			response = sendRESTRequestToASE(
-					AppScanConstants.APPSCAN_USERS_LOGIN, credentialsToBePosted);
+			response = sendRESTRequestToASE(AppScanConstants.APPSCAN_USERS_LOGIN, credentialsToBePosted);
 			LOGGER.error("After receiving an ERROR XML, login request was sent and completed. Now checking if everything is fine by requesting the version information.");
 			response = sendRESTRequestToASE("", null);
 		}
+
 		checkForError(response, null);
 
 	}
@@ -324,9 +318,7 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 			IOException, SAXException, XPathExpressionException,
 			DASTProxyException {
 
-		LOGGER.debug(
-				"Inside AppScanEnterpriseRestService.requestForUserAndVersionInfo. Logged in user is: ",
-				userName);
+		LOGGER.debug("Inside AppScanEnterpriseRestService.requestForUserAndVersionInfo. Logged in user is: ",userName);
 
 		// Initialization of XPath utilities
 		final XPathFactory factory = XPathFactory.newInstance();
@@ -345,10 +337,7 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 				&& !userNameOfAccountAccessingASE.contains(userName)) {
 
 			if (LOGGER.isDebugEnabled()) {
-				LOGGER.debug("ASE is being accessed using a system account. Because logged in user id is: "
-						+ userName
-						+ ". However the account logged into ASE is: "
-						+ userNameOfAccountAccessingASE);
+				LOGGER.debug("ASE is being accessed using a system account. Because logged in user id is: "+ userName+ ". However the account logged into ASE is: "+ userNameOfAccountAccessingASE);
 			}
 		}
 
@@ -358,8 +347,7 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 						response);
 
 		if (LOGGER.isDebugEnabled()) {
-			LOGGER.debug("The version of ASE being accessed is: "
-					+ versionNumber);
+			LOGGER.debug("The version of ASE being accessed is: "+ versionNumber);
 		}
 
 	}
@@ -379,23 +367,15 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 				AppScanConstants.APPSCAN_TEMPLATE_LIST_RELATIVE_URL, "");
 		checkForError(response, null);
 
-		if (LOGGER.isDebugEnabled()) {
-			LOGGER.debug("Checking for the template: "
-					+ AppScanConstants.APPSCAN_DEFAULT_TEMPLATE_NAME);
+		if (LOGGER.isDebugEnabled()) {LOGGER.debug("Checking for the template: "+ AppScanConstants.APPSCAN_DEFAULT_TEMPLATE_NAME);
 		}
 
 		// Search for desired template in the list of returned templates
-		templateId = (String) xpath.evaluate(
-				"//ase:content-scan-job[ase:name='"
-						+ AppScanConstants.APPSCAN_DEFAULT_TEMPLATE_NAME
-						+ "']/ase:id/text()", response, XPathConstants.STRING);
+		templateId = (String) xpath.evaluate("//ase:content-scan-job[ase:name='"+ AppScanConstants.APPSCAN_DEFAULT_TEMPLATE_NAME+ "']/ase:id/text()", response, XPathConstants.STRING);
 
 		if (!AppScanUtils.isNotNull(templateId)) {
-			LOGGER.error(" Error inside AppScanEnterpriseRestService.requestForTemplateInfo. Unable to find the default template: "
-					+ AppScanConstants.APPSCAN_DEFAULT_TEMPLATE_NAME);
-			throw new DASTProxyException(
-					AppScanConstants.APPSCAN_ERROR_CODE_TEMPLATE_NOT_FOUND,
-					"Template Id has returned as null. Unable to get the default template. Contact the administrator");
+			LOGGER.error(" Error inside AppScanEnterpriseRestService.requestForTemplateInfo. Unable to find the default template: "+ AppScanConstants.APPSCAN_DEFAULT_TEMPLATE_NAME);
+			throw new DASTProxyException(AppScanConstants.APPSCAN_ERROR_CODE_TEMPLATE_NOT_FOUND,"Template Id has returned as null. Unable to get the default template. Contact the administrator");
 		}
 
 		LOGGER.debug("Id for that template is: {}", templateId);
@@ -433,9 +413,7 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 
 		if (!AppScanUtils.isNotNull(scanId)) {
 			LOGGER.error(" Error inside AppScanEnterpriseRestService.requestForScanIdInfo. Unable to find the default Scan Job ID");
-			throw new DASTProxyException(
-					AppScanConstants.APPSCAN_ERROR_CODE_SCAN_JOB_ID_NOT_FOUND,
-					"ScanJob Id has returned as null. Contact the administrator");
+			throw new DASTProxyException(AppScanConstants.APPSCAN_ERROR_CODE_SCAN_JOB_ID_NOT_FOUND,"ScanJob Id has returned as null. Contact the administrator");
 		}
 
 		LOGGER.debug("Id for that Scan Job is: {} ", scanId);
@@ -448,8 +426,7 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 		if (AppScanUtils.isNotNull(nameOfScan)) {
 			newScanObject.setTestCaseName(nameOfScan);
 		} else {
-			newScanObject
-					.setTestCaseName(AppScanConstants.APPSCAN_TEST_CASE_NAME_MANUAL_SETUP);
+			newScanObject.setTestCaseName(AppScanConstants.APPSCAN_TEST_CASE_NAME_MANUAL_SETUP);
 		}
 
 		final Report report = new Report();
@@ -532,10 +509,11 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 			UnsupportedEncodingException, ParserConfigurationException,
 			IOException, SAXException, XPathExpressionException,
 			URISyntaxException {
-
 		LOGGER.debug("In AppScanEnterpriseRestService.requestForScanSetUp function");
+		boolean isScanRecordingValid = isScanRecordingValid(pathOfConfigFile);
 
-		if (!isScanRecordingValid(pathOfConfigFile)) {
+		LOGGER.debug("------------------------------isScanRecordingValid="+isScanRecordingValid);
+		if (!isScanRecordingValid) {
 			throw new DASTProxyException(
 					AppScanConstants.EXCEPTION_CODE_ONLY_EXTERNAL_URLS_FOR_SCAN,
 					"Recording has been done. However, due to external only URLS, not submitting data to the DAST Scanner");
@@ -571,34 +549,28 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 							.append(nameOfScan).append(" set up via DASTProxy")
 							.toString(), "UTF-8");
 		}
-
 		// Log in
 		final Document response = sendRESTRequestToASE("folders/"
 				+ userFolderId + "/folderitems?templateid=" + templateId,
 				"name=" + nameToBeSetForScan + "&description="
 						+ descToBeSetForScan);
 		checkForError(response, null);
-
 		LOGGER.debug("Scan has been successfully set up");
 
 		// Pick out created scan & report URL for use later
 		final String scanURL = (String) xpath
 				.evaluate("//ase:content-scan-job/@href", response,
 						XPathConstants.STRING);
-
 		// Pick out created scan options url for later use
 		final String optionsURL = (String) xpath.evaluate(
 				"//ase:content-scan-job/ase:options/@href", response,
 				XPathConstants.STRING);
-
 		LOGGER.debug("Scan urls have been extracted");
 
 		setUpStartingUrlForScan(optionsURL, pathOfConfigFile);
-
 		LOGGER.debug("Starting url has been set");
 
 		uploadHarToScanConfig(scanURL, pathOfConfigFile);
-
 		// Check for the scan Job ID
 		Scan scanJustSetUp = requestForScanJobInfo(response, userName,
 				nameOfScan);
@@ -621,11 +593,9 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 		 * scanJustSetUp.setScanId(scanId); scanJustSetUp.setFirstSetUp(new
 		 * Date());
 		 */
-
 		User user = new User();
 		user.setUserId(userName);
 		scanJustSetUp.setUser(user);
-
 		return scanJustSetUp;
 
 	}
@@ -706,13 +676,17 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 
 			int urlEntryCounter = 0;
 			while (urlEntryCounter < har.getLog().getEntries().size()) {
-				String startingUrl = har.getLog().getEntries()
-						.get(urlEntryCounter).getRequest().getUrl();
+				String startingUrl = har.getLog().getEntries().get(urlEntryCounter).getRequest().getUrl();
+				Inet4Address urlAddress = null;
+				try{
+					urlAddress = (Inet4Address) InetAddress.getByName(new URL(startingUrl).getHost());
 
-				Inet4Address urlAddress = (Inet4Address) InetAddress
-						.getByName(new URL(startingUrl).getHost());
+				} catch (UnknownHostException unhe){
+					//If the host is not reachable from DAST Proxy making the scan invalid.
+					return false;
+				}
 
-				if (urlAddress.isSiteLocalAddress()) {
+				if (urlAddress!= null && (urlAddress.isSiteLocalAddress() || isWhiteListedPublicIP(urlAddress.getHostAddress()))) {
 					break;
 				}
 				urlEntryCounter = urlEntryCounter + 1;
@@ -728,6 +702,25 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 
 		return false;
 	}
+
+	boolean isWhiteListedPublicIP(String ipAddress){
+		String whitelistedIPs = RootConfiguration.getProperties().getProperty(AppScanConstants.WHITE_LIST_PIBLIC_IPS);
+		LOGGER.debug("-----------------whitelistedIPs="+whitelistedIPs);
+		LOGGER.debug("-----------------ipAddress="+ipAddress);
+		if (!AppScanUtils.isNotNull(whitelistedIPs) || ipAddress == null) return false;
+		StringTokenizer st = new StringTokenizer(whitelistedIPs, ",");
+		while(st.hasMoreTokens()){
+			String ipWhiteListed = st.nextToken();
+			if (ipWhiteListed.equals(ipAddress)){
+
+				return true;
+			}
+		}
+		
+
+		return false;
+	}
+	
 
 	private void setUpStartingUrlForScan(final String optionsUrl,
 			final String pathOfConfigFile) throws IOException,
@@ -761,7 +754,6 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 			while (urlEntryCounter < har.getLog().getEntries().size()) {
 				String startingUrl = har.getLog().getEntries()
 						.get(urlEntryCounter).getRequest().getUrl();
-
 				Inet4Address urlAddress = (Inet4Address) InetAddress
 						.getByName(new URL(startingUrl).getHost());
 
@@ -779,7 +771,6 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 									+ "value="
 									+ URLEncoder.encode(startingUrl, "UTF-8"));
 						}
-
 						String startingUrlServiceUrl = null;
 
 						if (optionsUrl.endsWith("/")) {
@@ -807,12 +798,13 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 
 				urlEntryCounter = urlEntryCounter + 1;
 			}
-
+			/*
 			if (urlEntryCounter == har.getLog().getEntries().size()) {
 				throw new DASTProxyException(
 						"RECORDINGONEXTADDRESSONLY",
 						"Recording has been done. However, due to external only URLS, not submitting data to the DAST Scanner");
 			}
+			*/
 		}
 	}
 
@@ -846,26 +838,37 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 			throws UnsupportedEncodingException, ParserConfigurationException,
 			IOException, SAXException, DASTProxyException,
 			XPathExpressionException {
-
+		LOGGER.debug("Inside checkIfUserPresent....1");
 		// Initialization of XPath utilities
 		final XPathFactory factory = XPathFactory.newInstance();
 		final XPath xpath = factory.newXPath();
 		xpath.setNamespaceContext(_nsContext);
 
-		Document response = sendRESTRequestToASE(
-				AppScanConstants.APPSCAN_USERS_FOLDER_LIST_RELATIVE_URL, "");
+		Document response = null;
+		try {
+			response = sendRESTRequestToASE(AppScanConstants.APPSCAN_USERS_FOLDER_LIST_RELATIVE_URL, "");
+			LOGGER.debug("Inside checkIfUserPresent....2...response="+response);
+		} catch (ConnectException ce){
+			LOGGER.error("Could not find the user with userId="+userName+" in the Backend.");
+			LOGGER.error(ce);
+			return null;
+		}
 		LOGGER.debug("Check if user exists in the system. ");
 		checkForError(response, null);
+		LOGGER.debug("Inside checkIfUserPresent....2.1");
+
 
 		// Before that strip off 'CORP' from the user name in case it is
 		// there
 		if (userName.contains("CORP\\")) {
 			userName = userName.substring(userName.indexOf("\\") + 1);
 		}
+		LOGGER.debug("Inside checkIfUserPresent....3");
 
 		String userId = (String) xpath.evaluate("//ase:folder[ase:contact='"
 				+ userName + "']/ase:id/text()", response,
 				XPathConstants.STRING);
+		LOGGER.debug("Inside checkIfUserPresent....4...userId="+userId);
 
 		/*
 		 * XPathExpression expr = xpath
@@ -894,33 +897,46 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 	 * @throws DASTProxyException
 	 * @throws XPathExpressionException
 	 */
-	public boolean checkIfScanIsPresentForUser(final String userId,
-			final String scanId) throws UnsupportedEncodingException,
+	public boolean checkIfScanIsNotPresentForUser(final String userId, final String scanId) throws UnsupportedEncodingException,
 			ParserConfigurationException, IOException, SAXException,
 			DASTProxyException, XPathExpressionException {
+		LOGGER.debug("Inside checkIfScanIsNotPresentForUser...1");
 
+		boolean retValue = true;
+		try {
 		// Initialization of XPath utilities
 		final XPathFactory factory = XPathFactory.newInstance();
 		final XPath xpath = factory.newXPath();
+		LOGGER.debug("Inside checkIfScanIsNotPresentForUser...2");
+
 		xpath.setNamespaceContext(_nsContext);
 
 		Document response = sendRESTRequestToASE(
 				AppScanConstants.APPSCAN_BASE_URL + "folders/" + userId
 						+ "/folderitems", "");
+	
+		LOGGER.debug("Inside checkIfScanIsNotPresentForUser...3...response...="+response);
 		LOGGER.debug("Check if scan exists in the system. ");
 		checkForError(response, null);
 		final XPathExpression expr = xpath
 				.compile("//ase:folder-items/ase:content-scan-job[contains(ase:id,'"
 						+ scanId + "')]/ase:id/text()");
+		LOGGER.debug("Inside checkIfScanIsNotPresentForUser...4....expr="+expr);
 
 		final String id = (String) expr.evaluate(response,
 				XPathConstants.STRING);
+		LOGGER.debug("Inside checkIfScanIsNotPresentForUser...5....id="+id);
 
-		if (AppScanUtils.isNotNull(id)) {
-			return false;
-		} else {
-			return true;
+		if (id != null && !id.isEmpty()) {
+			LOGGER.debug("Inside checkIfScanIsNotPresentForUser...6");
+			retValue = false;
 		}
+		} catch(ConnectException ce){
+			LOGGER.error("Failed in checking if the scan is present for user...userId="+userId+" scanId="+scanId);
+			LOGGER.error(ce);
+		}
+		
+		return retValue;
 	}
 
 	/**
@@ -947,8 +963,7 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 		final XPath xpath = factory.newXPath();
 		xpath.setNamespaceContext(_nsContext);
 
-		final Document response = sendRESTRequestToASE(
-				AppScanConstants.APPSCAN_SERVICE_FOR_FOLDERITEM + scanId, "");
+		final Document response = sendRESTRequestToASE(AppScanConstants.APPSCAN_SERVICE_FOR_FOLDERITEM + scanId, "");
 		checkForError(response, null);
 
 		LOGGER.debug("Checking for the Scan Job Status. ");
@@ -999,8 +1014,7 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 		final XPath xpath = factory.newXPath();
 		xpath.setNamespaceContext(_nsContext);
 
-		final Document response = sendRESTRequestToASE(
-				AppScanConstants.APPSCAN_SERVICE_FOR_FOLDERITEM + scanId, "");
+		final Document response = sendRESTRequestToASE(AppScanConstants.APPSCAN_SERVICE_FOR_FOLDERITEM + scanId, "");
 
 		LOGGER.debug("Checking for the last run for the Scan. ");
 
@@ -1035,16 +1049,12 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 		final XPath xpath = factory.newXPath();
 		xpath.setNamespaceContext(_nsContext);
 
-		final Document response = sendRESTRequestToASE(
-				AppScanConstants.APPSCAN_SERVICE_FOR_FOLDERITEM + reportId, "");
-
-		LOGGER.debug("Checking for the last run for the Scan Report. ");
+		final Document response = sendRESTRequestToASE(AppScanConstants.APPSCAN_SERVICE_FOR_FOLDERITEM + reportId, "");
+		LOGGER.debug("Inside getLatestRunForScanReport...response.toString()="+response.toString());
+		checkForError(response, null);
 
 		// last run of the scan report
-		String latestRunScanReport = (String) xpath.evaluate(
-				"//ase:report-pack/ase:last-run/text()", response,
-				XPathConstants.STRING);
-		checkForError(response, null);
+		String latestRunScanReport = (String) xpath.evaluate("//ase:report-pack/ase:last-run/text()", response,XPathConstants.STRING);
 
 		if (!AppScanUtils.isNotNull(reportId)) {
 			LOGGER.error(" Error inside AppScanEnterpriseRestService.requestForScanIdInfo. "
@@ -1293,6 +1303,7 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 	}
 
 	/**
+	 * This is a generic method to function a request for AppScan and is user
 	 * @param relativeURL
 	 * @param postData
 	 * @throws ParserConfigurationException
@@ -1303,28 +1314,27 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 			final String postData) throws ParserConfigurationException,
 			IOException, SAXException {
 
+		LOGGER.debug("Inside sendRESTRequestToASE..relativeURL="+relativeURL);
+		LOGGER.debug("Inside sendRESTRequestToASE..AppScanUtils.isNotNull(postData)="+AppScanUtils.isNotNull(postData));
+		
 		// Boiler plate code
-		final DocumentBuilderFactory domFactory = DocumentBuilderFactory
-				.newInstance();
+		final DocumentBuilderFactory domFactory = DocumentBuilderFactory.newInstance();
 		domFactory.setNamespaceAware(true);
 		final DocumentBuilder builder = domFactory.newDocumentBuilder();
 
 		// Create the URL that we have to hit
 		URL url = null;
-		if (!relativeURL
-				.contains(RootConfiguration
-						.getProperties()
-						.getProperty(
-								AppScanConstants.PROPERTIES_APP_SCAN_SERVER_NAME_IDENTIFIER))) {
+		if (!relativeURL.contains(RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_APP_SCAN_SERVER_NAME_IDENTIFIER))) {
 			url = new URL(AppScanConstants.APPSCAN_BASE_URL + relativeURL);
 		} else {
 			url = new URL(relativeURL);
 		}
-		final HttpURLConnection httpURLConnection = (HttpURLConnection) url
-				.openConnection();
+		LOGGER.debug("Inside sendRESTRequestToASE..url="+url);
+
+		HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
 		httpURLConnection.setDoInput(true);
-		httpURLConnection.addRequestProperty(HTTP.CONTENT_TYPE,
-				MediaType.APPLICATION_FORM_URLENCODED_VALUE);
+		httpURLConnection.addRequestProperty(HTTP.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE);
+		LOGGER.debug("Inside sendRESTRequestToASE..cookieContainer="+cookieContainer);
 
 		if (cookieContainer.length() > 0) {
 			httpURLConnection.setRequestProperty("Cookie", cookieContainer);
@@ -1333,13 +1343,11 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 		// Check if this connection has data to send as A POST.
 		// If so then we need to set this request as a POST
 		if (AppScanUtils.isNotNull(postData)) {
-
 			OutputStreamWriter outputStreamWriter = null;
 			try {
 				httpURLConnection.setRequestMethod("POST");
 				httpURLConnection.setDoOutput(true);
-				final OutputStream outputStream = httpURLConnection
-						.getOutputStream();
+				final OutputStream outputStream = httpURLConnection.getOutputStream();
 				outputStreamWriter = new OutputStreamWriter(outputStream);
 				outputStreamWriter.write(postData);
 				outputStreamWriter.flush();
@@ -1350,24 +1358,39 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 			}
 		}
 
+		LOGGER.debug("Inside sendRESTRequestToASE..1=");
+		
 		try {
-			return builder.parse(new InputSource(httpURLConnection
-					.getInputStream()));
+			LOGGER.debug("Inside sendRESTRequestToASE..1.1...httpURLConnection.getResponseCode()="+httpURLConnection.getResponseCode());
+			//if (httpURLConnection.getResponseCode() >= 400) throw new DASTProxyException(httpURLConnection.getResponseCode(), httpURLConnection.getResponseMessage());
+			return builder.parse(new InputSource(httpURLConnection.getInputStream()));
 		} catch (SAXException saxException) {
+			LOGGER.debug("Inside sendRESTRequestToASE..2=");
+
 			LOGGER.error(saxException);
-			return builder.parse(new InputSource(httpURLConnection
-					.getErrorStream()));
+			//return builder.parse(new InputSource(httpURLConnection.getErrorStream()));
 		} catch (IOException ioException) {
+			LOGGER.debug("Inside sendRESTRequestToASE..3=");
+
+			ioException.printStackTrace();
 			LOGGER.error(ioException);
-			return builder.parse(new InputSource(httpURLConnection
-					.getErrorStream()));
+			if (httpURLConnection.getResponseCode() ==401) {
+				throw ioException;
+			}
+			return builder.parse(new InputSource(httpURLConnection.getErrorStream()));
 		} finally {
+			LOGGER.debug("Inside sendRESTRequestToASE..4=");
+
 			// Update cookies
-			Map<String, List<String>> responseHeaders = httpURLConnection
-					.getHeaderFields();
+			Map<String, List<String>> responseHeaders = httpURLConnection.getHeaderFields();
+
 			List<String> cookies = responseHeaders.get("Set-Cookie");
+
 			if (cookies != null && cookies.size() > 0) {
 				for (String cookie : cookies) {
+					LOGGER.debug("Inside sendRESTRequestToASE..cookie="+cookie);
+
+
 					if (cookieContainer.length() > 0)
 						cookieContainer += ", ";
 
@@ -1375,9 +1398,10 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 				}
 			}
 			httpURLConnection.disconnect();
+			LOGGER.debug("Inside sendRESTRequestToASE..cookie="+cookieContainer);
 
 		}
-
+		return null;
 	}
 
 	/**
@@ -1443,8 +1467,7 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 					.getInputStream()));
 		} finally {
 			// Update cookies
-			Map<String, List<String>> responseHeaders = httpURLConnection
-					.getHeaderFields();
+			Map<String, List<String>> responseHeaders = httpURLConnection.getHeaderFields();
 			List<String> cookies = responseHeaders.get("Set-Cookie");
 			if (cookies != null && cookies.size() > 0) {
 				for (String cookie : cookies) {
@@ -1454,6 +1477,7 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 					cookieContainer += cookie;
 				}
 			}
+
 			httpURLConnection.disconnect();
 
 		}
@@ -1464,8 +1488,6 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 			final String pathOfConfigFile) throws ParserConfigurationException,
 			IOException {
 
-		LOGGER.debug("In AppScanEnterpriseRestService.uploadHarToScanConfig function");
-		// System.out.println("In AppScanEnterpriseRestService.uploadHarToScanConfig function");
 
 		// Create the URL that we have to hit
 		final URL url = new URL(scanUrl
@@ -1482,30 +1504,27 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 		httpURLConnection.addRequestProperty("Content-Type",
 				"application/octet-stream");
 		httpURLConnection.setRequestMethod("POST");
-
 		if (cookieContainer.length() > 0) {
 			httpURLConnection.setRequestProperty("Cookie", cookieContainer);
 		}
-
 		httpURLConnection.setDoOutput(true);
 		final OutputStream outputStream = httpURLConnection.getOutputStream();
 		final InputStream inputStream1 = new FileInputStream(new File(
 				pathOfConfigFile));
-
 		LOGGER.debug("File Being Uploaded is: {}", pathOfConfigFile);
 		byte[] bytes = IOUtils.toByteArray(inputStream1);
 		outputStream.write(bytes);
 		outputStream.flush();
-
 		if (httpURLConnection.getResponseCode() != HttpURLConnection.HTTP_OK) {
 			LOGGER.debug("Error if any is: {}",
 					httpURLConnection.getErrorStream());
 		}
 
-		// System.out.println("Response Code:" +
+		// LOGGER.debug("Response Code:" +
 		// httpURLConnection.getResponseCode());
 
 		httpURLConnection.disconnect();
+
 	}
 
 	/**
@@ -1523,11 +1542,15 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 		LOGGER.debug("Inside AppScanEnterpriseRestService.checkForError function.");
 
 		final Element rootElement = document.getDocumentElement();
+
+		LOGGER.debug("Inside AppScanEnterpriseRestService.checkForError function...rootElement="+rootElement);
+
 		if ("error".equalsIgnoreCase(rootElement.getTagName())) {
 
 			// if (LOGGER.isDebugEnabled()) {
 			LOGGER.debug("Error has occured on request to ASE");
 			LOGGER.debug("Returned Error Codes are:");
+
 
 			final NodeList nodes = rootElement.getChildNodes();
 			for (int i = 0; i < nodes.getLength(); i++) {
@@ -1535,8 +1558,7 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 				final String nodeName = node.getLocalName();
 
 				if ("code".equalsIgnoreCase(nodeName)) {
-					final String code = node.getChildNodes().item(0)
-							.getNodeValue();
+					final String code = node.getChildNodes().item(0).getNodeValue();
 					LOGGER.debug(code);
 					if (expectedCodes != null && expectedCodes.contains(code)) {
 						LOGGER.debug("Expected error code found. Returning to normal execution");
@@ -1549,8 +1571,9 @@ public class AppScanEnterpriseRestService implements DASTApiService {
 				}
 				// }
 			}
-			throw new DASTProxyException(
-					"Unexpected error on return of response from ASE");
+			LOGGER.debug("Inside AppScanEnterpriseRestService.checkForError function...exception..."+document.toString());
+			throw new DASTProxyException("Unexpected error on return of response from ASE");
 		}
+		LOGGER.debug("Inside AppScanEnterpriseRestService.checkForError function...no error");
 	}
 }
