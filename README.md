@@ -6,23 +6,40 @@ Repository for a solution related to a custom solution to automate security scan
 Current technologies used are:
 
 Java SDK 1.8.0 Update 31
+
 Spring Framework  4.1.5
+
 Spring Security  3.2.5
+
 Spring LDAP  2.0.2
+
 Jackson  2.5.0
+
 Hibernate  4.3.8
+
 Browsermob Proxy 2.0.0
+
 Log4j  2.2
+
 ESAPI 2.1.0
+
 OWASP Dependency Check 1.2.9
+
 Web Technologies
+
 Tomcat 8.0.20
+
 jQuery 1.11.2
+
 Bootstrap 3.2.0
+
 Maven 3.2.5
+
 .NET 4.5.2
+
 Python 2.7.8
-MySQL 5.6.21 
+
+MySQL 5.6.21
 
 
 License
