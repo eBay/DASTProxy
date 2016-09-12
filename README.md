@@ -63,7 +63,7 @@ DAST Dashboard lists all the scans, displays statuses, vulnerabilities with a me
 ![alt tag](https://github.com/eBay/DASTProxy/blob/master/src/main/webapp/images/Dashboard3.png)
 
 
-<h3>Technologies Used<h3>
+<h3>Technologies Used</h3>
 
 
 Java SDK 1.8.0 Update 31
