@@ -51,7 +51,7 @@ NT Objectives integration
 
 Admin features
 
-<h3>DAST dashboard<h3>
+<h3>DAST dashboard</h3>
 
 
 DAST Dashboard lists all the scans, displays statuses, vulnerabilities with a means to publish the vulnerabilities to JIRA. It has feature to re-run the scans as a whole suite or a subset.
