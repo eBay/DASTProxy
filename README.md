@@ -1,6 +1,6 @@
 What is DAST Proxy?
 
-DAST Proxy is a life cycle management tool with workflows which help users record browser actions and submit those to the backend scan engine like AppScan. It updates the user with the scan status and publishes the scan results. It supports automation integration and has a set of RESTful web services which can be seamlessly integrated into any existing Selenium (or any other automation framework) functional test cases for security testing. DAST Proxy also works with all the browser-based test cases for both web and mobile applications.
+DAST Proxy is a life cycle management tool for dynamic application security scans, with workflows that help users record browser actions and submit those to the backend scan engine like AppScan. It updates the user with the scan status and publishes the scan results. It supports automation integration and has a set of RESTful web services which can be seamlessly integrated into any existing Selenium (or any other automation framework) functional test cases for security testing. DAST Proxy also works with all the browser-based test cases for both web and mobile applications.
 
 
 DASTProxy
