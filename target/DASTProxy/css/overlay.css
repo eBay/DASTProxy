@@ -1,0 +1,81 @@
+.html_overlay {
+    height: 0%;
+    width: 100%;
+    position: fixed;
+    z-index: -1;
+    top: 0;
+    left: 0;
+    background-color: rgb(0,0,0);
+    background-color: rgba(0,0,0, 0.9);
+    overflow-y: hidden;
+    transition: 0.5s;
+}
+.overlay {
+    height: 100%;
+    width: 0;
+    position: fixed;
+    z-index: 100;
+    top: 0%;
+    left: 0%;
+    text-color:white;
+    background-color: #f8f8f8;
+    overflow-x: hidden;
+    transition: 0.8s;
+    z-index:3;
+}
+.overlay_border{
+	border: 1px solid #000000;
+	z-index:3;
+}
+
+.overlay-content {
+    position: relative;
+    top: 12%;
+    width: 100%;
+    text-align: center;
+    margin-top: 0px;
+    z-index:3;
+}
+
+.overlay a:hover, .overlay a:focus {
+    text-decoration: none;
+    color: #005fbf;
+}
+
+.closebtn {
+    position: absolute;
+    top: 0px;
+    right: 10px;
+    padding: 8px;
+    text-decoration: none;
+    font-size: 34px;
+    color: #005fbf;
+    text-decoration:
+}
+
+@media screen and (max-height: 100px) {
+  .overlay a {font-size: 20px}
+  .closebtn {
+    font-size: 40px !important;
+    font-color:red;
+    top: 0px;
+    right: 0px;
+  }
+}
+.submit_btn {
+    color:white;
+    border:1px solid #CCC;
+    background:#005fbf;
+    cursor:pointer;
+    vertical-align:middle;
+    max-width: 220px;
+    padding: 5px;
+    text-align: center;
+    margin-top: 30px;
+    margin-right: 70px;
+    float: right;
+}
+.submit_btn:active {
+    color:white;
+    box-shadow: 0 0 5px -1px rgba(0,0,0,0.6);
+}

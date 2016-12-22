@@ -1,0 +1,75 @@
+<beans:beans xmlns="http://www.springframework.org/schema/security"
+	xmlns:beans="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:security="http://www.springframework.org/schema/security"
+	xmlns:jee="http://www.springframework.org/schema/jee"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+						http://www.springframework.org/schema/beans/spring-beans.xsd
+						http://www.springframework.org/schema/security
+						http://www.springframework.org/schema/security/spring-security.xsd
+						http://www.springframework.org/schema/jee 
+    					http://www.springframework.org/schema/jee/spring-jee.xsd">
+
+	<http pattern="/css/**" security="none" />
+	<http pattern="/images/**" security="none" />
+	<http pattern="/js/**" security="none" />
+	<http pattern="/error.jsp" security="none" />
+	<http pattern="/logout" security="none" />
+	<http pattern="/accessdenied" security="none" />
+	<http pattern="/rest/v1/selenium/dastscan" security="none" />
+	<http pattern="/rest/v1/proxy" security="none" />
+	<http pattern="/rest/v1/proxy/cancel" security="none" />
+
+	<http use-expressions="false">
+		<intercept-url pattern="/*" access="ROLE_USER" />
+		<intercept-url pattern="/rest/v1/*" access="ROLE_USER, ROLE_SELENIUM_USER" />
+		<http-basic entry-point-ref="authenticationEntryPoint" />
+		<security:access-denied-handler
+			error-page="/accessdenied" />
+		<logout logout-success-url="/logout" invalidate-session="true"
+			delete-cookies="JSESSIONID" />
+		<session-management session-fixation-protection="newSession" />
+		<csrf disabled="true" />
+	</http>
+
+	<beans:bean id="authenticationEntryPoint"
+		class="org.springframework.security.web.authentication.www.BasicAuthenticationEntryPoint">
+		<beans:property name="realmName"
+			value="Please enter your QA NT credentials (not the same as CORP credentials)" />
+	</beans:bean>
+
+	<authentication-manager erase-credentials="false">
+		<authentication-provider>
+			<user-service>
+				<user name="AUTOMATION_USER" password="AUTOMATION_USER_PASSWORD" authorities="ROLE_SELENIUM_USER" />
+				<user name="REGULAR_USER" password="REGULAR_USER_PASSWORD" authorities="ROLE_USER" />
+			</user-service>
+		</authentication-provider>
+		<authentication-provider ref="ldapActiveDirectoryAuthProvider" />
+	</authentication-manager>
+
+	<beans:bean id="dastGrantedAuthoritiesMapper"
+		class="com.dastproxy.services.security.DASTGrantedAuthoritiesMapper" />
+
+	<beans:bean id="ldapActiveDirectoryAuthProvider" class="org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider">
+		<beans:constructor-arg>
+			<jee:jndi-lookup jndi-name="java:comp/env/prop/ldapDomain" />		
+		</beans:constructor-arg>
+		<beans:constructor-arg>
+			<jee:jndi-lookup jndi-name="java:comp/env/prop/ldapURL" />
+		</beans:constructor-arg>
+		<beans:constructor-arg>
+			<jee:jndi-lookup jndi-name="java:comp/env/prop/ldapRootDn" />
+		</beans:constructor-arg>
+		<beans:property name="useAuthenticationRequestCredentials"
+			value="true" />
+		<beans:property name="convertSubErrorCodesToExceptions"
+			value="true" />
+		<beans:property name="authoritiesMapper" ref="dastGrantedAuthoritiesMapper" />
+	</beans:bean>
+
+	<beans:bean id="roleVoter"
+		class="org.springframework.security.access.vote.RoleVoter">
+		<beans:property name="rolePrefix" value="ROLE_" />
+	</beans:bean>
+
+</beans:beans>

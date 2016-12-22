@@ -40,6 +40,8 @@
 	<authentication-manager erase-credentials="false">
 		<authentication-provider>
 			<user-service>
+				<user name="AUTOMATION_USER" password="AUTOMATION_USER_PASSWORD" authorities="ROLE_SELENIUM_USER" />
+				<user name="REGULAR_USER" password="REGULAR_USER_PASSWORD" authorities="ROLE_USER" />
 			</user-service>
 		</authentication-provider>
 		<authentication-provider ref="ldapActiveDirectoryAuthProvider" />
@@ -48,8 +50,7 @@
 	<beans:bean id="dastGrantedAuthoritiesMapper"
 		class="com.dastproxy.services.security.DASTGrantedAuthoritiesMapper" />
 
-	<beans:bean id="ldapActiveDirectoryAuthProvider"
-class="org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider">
+	<beans:bean id="ldapActiveDirectoryAuthProvider" class="org.springframework.security.ldap.authentication.ad.ActiveDirectoryLdapAuthenticationProvider">
 		<beans:constructor-arg>
 			<jee:jndi-lookup jndi-name="java:comp/env/prop/ldapDomain" />		
 		</beans:constructor-arg>

@@ -1,0 +1,11 @@
+Hi, <br/>
+
+<br/>
+There has been a query submitted by a customer. The details are:
+<br/><br/>
+Environment: ${currentEnvironment}
+<br/><br/>
+Issue Type: ${issueType}
+<br/><br/>User Id: ${userId}
+<br/><br/>Issue Description: ${issueDescription}
+<br/><br/>

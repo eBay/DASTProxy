@@ -1,0 +1,23 @@
+<html>
+<body>
+Hi,
+<br><br>
+<table id="tableid" border="1" cellpadding="5" >
+<thead>
+<tr>
+<th id="scanName" bgcolor="#B6B6B4">TestCase Name</th>
+<td>${testCaseName}</td>
+</tr>
+<tr>
+<th id="testCase" bgcolor="#B6B6B4">Reason/Remarks</th>
+<td>${reasonForRejection}</td>
+</tr>
+</thead>
+</table>
+
+<p>
+Please <a href="mailto:${contactUsSupportDl}">Contact Us</a> for any questions.
+
+<p><b>Note:</b> Please do not reply to this email.</p>
+</body>
+</html>

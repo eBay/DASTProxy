@@ -1,0 +1,23 @@
+<html>
+<body>
+Hi,
+<br><br>
+<table id="tableid" border="1" cellpadding="5" >
+<thead>
+<tr>
+<th id="scanName" bgcolor="#B6B6B4">Job Name</th>
+<td>${scanName}</td>
+</tr>
+<tr>
+<th id="testCase" bgcolor="#B6B6B4">TestCase Name</th>
+<td>${testCaseName}</td>
+</tr>
+</thead>
+</table>
+
+<p>We will notify you once the scan starts running.
+Please <a href="mailto:${contactUsSupportDl}">Contact Us</a> for any questions regarding the scan.
+
+<p><b>Note:</b> Please do not reply to this email.</p>
+</body>
+</html>

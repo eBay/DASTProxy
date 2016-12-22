@@ -1,0 +1,29 @@
+<html>
+<body>
+Hi,
+<br><br>
+<table id="tableid" border="1" cellpadding="5" >
+<thead>
+<tr bgcolor="#B6B6B4">
+<th id="scanName">Job Name</th>
+<th id="scanState">Scan State</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>${scanName} </td>
+<td>${scanStatus}</td>
+</tr>
+</tbody>
+</table>
+
+#if(${scanStatus}=="Suspended")
+	<b><p>There seems to be some problem with the scan. You can try setting up one again or please <a href="mailto:${contactUsSupportDl}">Contact Us</a> to debug and resume the existing scan!</p></b>
+#else
+	<p>We will send you the summary report once the scan is complete.<br/>
+	To check the progress of ongoing scan for the Job <a href=${baseURL}fiid=${scanId}&fid=${userId}>click here</a></p>
+	<br/><br/>
+#end
+<p><b>Note:</b> Please do not reply to this email.</p>
+</body>
+</html>

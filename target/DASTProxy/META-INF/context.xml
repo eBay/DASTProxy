@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context path="/DASTProxy" reloadable="false">
+	<ResourceLink name="prop/CurrentEnvironment" global="prop/CurrentEnvironment"
+		type="java.lang.String" />
+	<ResourceLink name="prop/CurrentEnvironmentBaseUrl" global="prop/CurrentEnvironmentBaseUrl"
+		type="java.lang.String" />
+	<ResourceLink name="prop/AppScanBaseUrl" global="prop/AppScanBaseUrl"
+		type="java.lang.String" />
+	<ResourceLink name="prop/AppScanServicesBaseUrl" global="prop/AppScanServicesBaseUrl"
+		type="java.lang.String" />
+	<ResourceLink name="prop/AppScanServerName" global="prop/AppScanServerName"
+		type="java.lang.String" />
+	<ResourceLink name="prop/ErrorMessageContactDL" global="prop/ErrorMessageContactDL"
+		type="java.lang.String" />
+	<ResourceLink name="prop/ContactUsSupportDL" global="prop/ContactUsSupportDL"
+		type="java.lang.String" />
+	<ResourceLink name="jdbc/DatabaseName" global="jdbc/DatabaseName"
+		auth="Container" type="javax.sql.DataSource" />
+	<ResourceLink name="prop/DoNotReplyEmailId" global="prop/DoNotReplyEmailId"
+		type="java.lang.String" />
+	<ResourceLink name="prop/AppScanServiceAccountId" global="prop/AppScanServiceAccountId"
+		type="java.lang.String" />
+	<ResourceLink name="prop/AppScanServiceAccountPwd" global="prop/AppScanServiceAccountPwd"
+		type="java.lang.String" />
+	<ResourceLink name="prop/RunCronJobs" global="prop/RunCronJobs"
+		type="java.lang.String" />
+	<ResourceLink name="prop/JIRABaseUrl" global="prop/JIRABaseUrl"
+		type="java.lang.String" />
+	<ResourceLink name="prop/JIRAServiceAccountUsername" global="prop/JIRAServiceAccountUsername"
+		type="java.lang.String" />
+	<ResourceLink name="prop/JIRAServiceAccountPassword" global="prop/JIRAServiceAccountPassword"
+		type="java.lang.String" />
+	<ResourceLink name="prop/ldapURL" global="prop/ldapURL"
+		type="java.lang.String" />
+	<ResourceLink name="prop/ldapDomain" global="prop/ldapDomain"
+		type="java.lang.String" />
+	<ResourceLink name="prop/ldapRootDn" global="prop/ldapRootDn" type="java.lang.String" />
+	<ResourceLink name="prop/smtpServerDomain" global="prop/smtpServerDomain"
+		type="java.lang.String" />
+	<ResourceLink name="prop/orgHttpProxy" global="prop/orgHttpProxy"
+		type="java.lang.String" />
+	<ResourceLink name="prop/dastScannerScanningTemplateIdOrName" global="prop/dastScannerScanningTemplateIdOrName"
+		type="java.lang.String" />
+	<ResourceLink name="prop/emailDomain" global="prop/emailDomain" type="java.lang.String" />
+	<ResourceLink name="prop/whiteListPublicIPs" global="prop/whiteListPublicIPs" type="java.lang.String" />
+		
+</Context>
