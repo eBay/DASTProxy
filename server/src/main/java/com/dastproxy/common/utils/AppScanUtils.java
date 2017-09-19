@@ -1,7 +1,7 @@
 /**
  * This class will hold all utility methods (methods that would be required through
- * out the entire program). 
- * 
+ * out the entire program).
+ *
  * @author Kiran Shirali (kshirali@ebay.com)
  */
 
@@ -42,8 +42,6 @@ import com.dastproxy.model.Report;
 import com.dastproxy.model.Scan;
 import com.dastproxy.model.ScanBatch;
 import com.dastproxy.model.User;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.Authentication;
 
 public final class AppScanUtils {
 
@@ -60,14 +58,13 @@ public final class AppScanUtils {
 
 	/**
 	 * This utility method will return the user object of the logged in user.
-	 * 
+	 *
 	 * @return logged in user object.
 	 */
 	public static User getLoggedInUser() {
 
 		final User loggedInUser = new User();
-		final Authentication auth = SecurityContextHolder.getContext()
-				.getAuthentication();
+		final Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		loggedInUser.setUserId(auth.getName());
 		loggedInUser.setPassword(auth.getCredentials().toString());
 		return loggedInUser;
@@ -75,7 +72,7 @@ public final class AppScanUtils {
 
 	/**
 	 * This utility method will return the IP address of the system.
-	 * 
+	 *
 	 * @return Internal Subnet IP address in String Format
 	 */
 	public static String getIpAddress() {
@@ -151,7 +148,7 @@ public final class AppScanUtils {
 	/**
 	 * This utility method returns a random port number (all the port numbers
 	 * are above 1023)
-	 * 
+	 *
 	 * @return A Random Port Number
 	 */
 	public static int getRandomPort() {
@@ -171,7 +168,7 @@ public final class AppScanUtils {
 
 	/**
 	 * Note: This works only on a windows machine.
-	 * 
+	 *
 	 * @param Path
 	 * @param userId
 	 * @return Absolute Path of the folder for the user
@@ -199,7 +196,7 @@ public final class AppScanUtils {
 
 	/**
 	 * This utility method returns a date in a predefined format.
-	 * 
+	 *
 	 * @return Date as a String
 	 */
 	public static String returnDateInPredefinedFormat() {
@@ -209,10 +206,10 @@ public final class AppScanUtils {
 
 	/**
 	 * This utility method checks whether a particular String is null or not.
-	 * 
+	 *
 	 * @param String
 	 *            to be checked
-	 * 
+	 *
 	 * @return True/False
 	 */
 	public static boolean isNotNull(final String element) {
@@ -227,10 +224,10 @@ public final class AppScanUtils {
 
 	/**
 	 * This utility method checks whether a particular object is null or not.
-	 * 
+	 *
 	 * @param object
 	 *            to be checked
-	 * 
+	 *
 	 * @return True/False
 	 */
 	public static boolean isNotNull(final Object object) {
@@ -246,7 +243,7 @@ public final class AppScanUtils {
 	/**
 	 * This utility method sends an mail out to the developers DL when an error
 	 * occurs.
-	 * 
+	 *
 	 * @param Exception
 	 *            that has been thrown
 	 */
@@ -300,6 +297,7 @@ public final class AppScanUtils {
 								.getProperties()
 								.getProperty(
 										AppScanConstants.PROPERTIES_ERROR_CONTACT_DL_IDENTIFIER),
+								null,
 						RootConfiguration
 								.getProperties()
 								.getProperty(
@@ -314,7 +312,7 @@ public final class AppScanUtils {
 	 * There are a couple of characters that Windows will not accept in a file
 	 * name. This function will remove/change those characters and will return a
 	 * windows safe file system name.
-	 * 
+	 *
 	 * @param nameOfFile
 	 * @return Windows Safe File System Name
 	 */
@@ -324,68 +322,24 @@ public final class AppScanUtils {
 
 	/**
 	 * This function is used to create a list with a transitive url to the bug UI. This function will be used for reporting purposes.
-	 * 
+	 *
 	 * @param issuesToBeTransformed
 	 * @return issuesList
 	 */
 	public static List<Issue> returnDASTProxyRelativeUrlIssueList(
 			final Report reportFromWhichIssuesToBeTransformed) {
-		
+
 		List<Issue> issuesToBeTransformed = reportFromWhichIssuesToBeTransformed.getIssues();
 		List<Issue> finalIssuesList = new LinkedList<Issue>();
 		for (Issue issue : issuesToBeTransformed) {
-			String dastProxyRelativeBugUIUrl = RootConfiguration
-					.getProperties()
-					.getProperty(
-							AppScanConstants.PROPERTIES_OPERATING_ENVIRONMENT_BASE_URL_IDENTIFIER)
-					+ "issue?report="+reportFromWhichIssuesToBeTransformed.getReportId()+"&&issue=" + issue.getIssuePrimaryKey().getIssueId();
+			System.out.println("-------------------Inside returnDASTProxyRelativeUrlIssueList issue.getId()="+issue.getId());
+			String dastProxyRelativeBugUIUrl = RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_OPERATING_ENVIRONMENT_BASE_URL_IDENTIFIER)
+					+ "issueNew?report="+reportFromWhichIssuesToBeTransformed.getId()+"&issue=" + issue.getId();
 			issue.setDastProxyBugUIIssueUrl(dastProxyRelativeBugUIUrl);
 			finalIssuesList.add(issue);
 		}
 
 		return finalIssuesList;
 	}
-	
-	private Recording createRecording(String name, String owner, String harFilename){
-		Recording recordingInstance = new Recording();
-		if (name != null && !"none".equals(name)){
-			if (name.length() > 45) name = name.substring(0, 44);
-			recordingInstance.setTestcaseName(name);
-		} else {
-			recordingInstance.setTestcaseName(owner + AppScanUtils.returnDateInPredefinedFormat());
-		}
 
-		recordingInstance.setOwner(owner);
-		recordingInstance.setHarFilename(harFilename);
-		recordingInstance.setEnabled(true);
-		Date now = new Date();
-		recordingInstance.setDateCreated(now);
-		recordingInstance.setLastModified(now);
-
-		return recordingInstance;
-	}
-
-	private RecordingBatch createRecordingBatch(String testsuiteName, boolean isManual){
-		RecordingBatch batch = new RecordingBatch();
-		batch.setTestsuiteName(testsuiteName);
-		batch.setEnabled(true);
-		batch.setDateCreated(new Date());
-		batch.setManualTestBatch(isManual);
-		batch.setOwner(AppScanUtils.getLoggedInUser().getUserId());
-
-		return batch;
-	}
-
-	private ScanBatch createAndSaveScanBatch(Long recordingBatchId, List<Scan> scans){
-		ScanBatch batch = new ScanBatch();
-		batch.setOwner(AppScanUtils.getLoggedInUser().getUserId());
-		batch.setTestsuiteName(AppScanConstants.APPSCAN_MANUAL_TEST_SUITE);
-		batch.setDateCreated(new Date());
-		batch.setSubsetOfBatch(true);
-		batch.setRecordingBatchId(recordingBatchId);
-		batch.setScans(scans);
-
-		dao.saveGenericEntity(batch);
-		return batch;
-	}
 }

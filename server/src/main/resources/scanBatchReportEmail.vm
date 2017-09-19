@@ -1,15 +1,16 @@
 <html>
 <body>
-Hi,
+Hello,
 <br/>
-#if($issueDetails.isEmpty())
-	<p> No Vulnerabilities found for this Scan.</p>
+#set ($map = $scanIssuesMap )
+#if($map.isEmpty())
+	<p> No Vulnerabilities found for this Scan Batch.</p>
 #else
-	<p> Below are the issues found for Scan: ${scanName}</p>
+	<p> Below are the <b>new</b>  issues found for Scan Batch: ${scanBatchName} since the last run.</p>
 	<table id="tableid" border="1" cellpadding="5">
 		<thead>
 			<tr bgcolor="#B6B6B4">
-				<th id="testCaseName" rowspan=2>TestCase</th>
+				<th id="testCaseName" rowspan=2>TestCase/Scan</th>
 				<th id="issues" colspan=4>Issues</th>
 			</tr>
 			<tr bgcolor="#B6B6B4">
@@ -20,9 +21,10 @@ Hi,
 			</tr>
 		</thead>
 		<tbody>
-			#foreach( $details in $issueDetails )	
+		#foreach ($mapEntry in $map.entrySet())
+			#foreach( $details in $mapEntry.value )
 				<tr>
-					<td headers="testCaseName">$testCaseName</td>
+					<td headers="testCaseName">$mapEntry.key</td>
 					<td id="td1" headers="issueId">
 	    				<a href="$details.dastProxyBugUIIssueUrl" > $details.id</a>
 	    			</td>
@@ -32,13 +34,11 @@ Hi,
 	    			#if($details.severity == "Medium")
 	    			<td id="td1" headers="severity" bgcolor="#FBB917"> $details.severity</td>
 	    			#end
-	    			#if($details.severity == "Low")
-	    			<td id="td1" headers="severity" bgcolor="#FFFFCC"> $details.severity</td>
-	    			#end
    		    		<td id="td1" headers="issueType"> $details.issueType</td>         
    		    		<td id="td1" headers="testUrl">$details.testUrl</td>
    				</tr>
 			#end
+		#end
 		</tbody>
 	</table><br/>
 #end

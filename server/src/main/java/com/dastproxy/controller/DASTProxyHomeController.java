@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import com.dastproxy.common.utils.DastUtils;
 import com.dastproxy.dao.DastDAO;
 import com.dastproxy.services.DASTApiService;
 
@@ -135,6 +136,17 @@ public class DASTProxyHomeController {
 		return "issueDetails";
 	}
 	
+	/**
+	 * This will redirect you to the Issue Details page.
+	 *
+	 * @return Logout Page
+	 */
+	@RequestMapping(value = { "/issueNew/**" }, method = RequestMethod.GET)
+	public String returnIssueDetailsViewNew(){
+
+		return "issueDetailsNew";
+	}	
+
 	/**
 	 * This will redirect you to the Metrics page.
 	 * 

@@ -1,0 +1,58 @@
+<html>
+<body>
+Hi,
+<br/>
+#if ($metaReferrerScans.size()!=0)
+<p> Below are the scans with meta referrer content</p>
+<table id="tableid" border="1" cellpadding="5">
+	<thead>
+		<tr bgcolor="#B6B6B4">
+			<th id="testCaseName">TestCase</th>
+			<th id="testCaseName">Scan Batch</th>
+			<th id="testCaseName">Download HAR</th>
+			<th id="testCaseName">Project URL</th>
+		</tr>
+	</thead>
+	<tbody>
+		#foreach( $details in $metaReferrerScans)
+			<tr>
+				<td headers="testCaseName">$details.scanName</td>
+				<td id="td1" headers="issueId"><a href="$details.scanBatchLink" >Scan Batch</a></td>
+				<td id="td1" headers="issueId"><a href="$details.harUrl" > HAR file Download</a></td>    			
+				<td id="td1" headers="issueId"><a href="$details.projectUrl" > $details.projectUrl</a></td>
+			</tr>
+		#end
+	</tbody>
+</table><br/>
+#end
+<br/>
+#if($noHTTPSscans.size()!=0)
+<p> Below are the scans with HTTP URLs (no HTTPS)</p>
+<table id="tableid" border="1" cellpadding="5">
+	<thead>
+		<tr bgcolor="#B6B6B4">
+			<th id="testCaseName">TestCase</th>
+			<th id="testCaseName">Scan Batch</th>
+			<th id="testCaseName">Download HAR</th>
+			<th id="testCaseName">Project URL</th>
+		</tr>
+	</thead>
+	<tbody>
+		#foreach( $details in $noHTTPSscans)
+			<tr>
+				<td headers="testCaseName">$details.scanName</td>
+				<td id="td1" headers="issueId"><a href="$details.scanBatchLink" >Scan Batch</a></td>
+				<td id="td1" headers="issueId"><a href="$details.harUrl" > HAR file Download</a></td>    			
+				<td id="td1" headers="issueId">
+				#foreach( $url in $details.httpUrls)
+					<a href="$url">$url</a><br/>
+				#end
+				</td>
+			</tr>
+		#end
+	</tbody>
+</table><br/>
+#end
+<p><b>Note:</b> Please do not reply to this email.</p>
+</body>
+</html>

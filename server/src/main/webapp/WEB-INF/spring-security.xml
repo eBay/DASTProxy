@@ -24,7 +24,7 @@
 		<intercept-url pattern="/rest/v1/*" access="ROLE_USER, ROLE_SELENIUM_USER" />
 		<http-basic entry-point-ref="authenticationEntryPoint" />
 		<security:access-denied-handler
-			error-page="/accessdenied" />
+error-page="/accessdenied" />
 		<logout logout-success-url="/logout" invalidate-session="true"
 			delete-cookies="JSESSIONID" />
 		<session-management session-fixation-protection="newSession" />
@@ -32,9 +32,9 @@
 	</http>
 
 	<beans:bean id="authenticationEntryPoint"
-		class="org.springframework.security.web.authentication.www.BasicAuthenticationEntryPoint">
+class="org.springframework.security.web.authentication.www.BasicAuthenticationEntryPoint">
 		<beans:property name="realmName"
-			value="Please enter your QA NT credentials (not the same as CORP credentials)" />
+			value="Please enter your credentials" />
 	</beans:bean>
 
 	<authentication-manager erase-credentials="false">

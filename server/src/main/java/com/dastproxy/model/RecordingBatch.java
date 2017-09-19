@@ -39,6 +39,10 @@ public class RecordingBatch {
 
 	@Column(name="last_modified")
 	private Date lastModified;
+	
+	@Column(name="is_nightly_batch")
+	private boolean isNightlyBatch;
+
 
 	public String getTestsuiteName() {
 		return testsuiteName;
@@ -100,5 +104,11 @@ public class RecordingBatch {
 		return id;
 	}
 
-	
+	public boolean isNightlyBatch() {
+		return isNightlyBatch;
+	}
+
+	public void setNightlyBatch(boolean isNightlyBatch) {
+		this.isNightlyBatch = isNightlyBatch;
+	}
 }

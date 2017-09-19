@@ -9,26 +9,16 @@
 <meta name="author" content="">
 <link rel="icon" href="images/Interceptor.ico">
 
-<title>DASTProxy v3.0</title>
+<title>DASTProxy 5.0 beta</title>
 
-<!-- Bootstrap core CSS -->
 <link href="css/bootstrap.min.css" rel="stylesheet">
 
-<!-- Custom styles for this template -->
 <link href="css/dastProxyBootstrapCustom.css" rel="stylesheet">
 
-<!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
-<!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
 <script src="../../assets/js/ie-emulation-modes-warning.js"></script>
 
-<!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
 <script src="../../assets/js/ie10-viewport-bug-workaround.js"></script>
 
-<!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-<!--[if lt IE 9]>
-      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
-      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-    <![endif]-->
 <link href="css/data_table.css" rel="stylesheet">
 <link href="css/main.css" rel="stylesheet">
 <link href="css/overlay.css" rel="stylesheet">
@@ -37,7 +27,7 @@
 <script src="js/bootstrap.min.js"></script>
 <script src="js/pagination/dirPagination.js"></script>
 <script src="js/common/dastProxyConstants.js"></script>
-<script src="js/model/mainModel.js"></script>
+<script src="js/model/mainModelNew.js"></script>
 <script src="js/view/dastProxyMainView.js"></script>
 <script src="js/URI.js"></script>
 
@@ -45,6 +35,7 @@
 	var scanBatchId='${scanBatchId}';
 	var selectedIssueId;
 	var selectedReportId;
+	var commentsIssueId;
 
 	// The following JS code has to be moved to a new JS file and has to be re-used for all non-main pages
 	var loggedInUser = '<%=AppScanUtils.getLoggedInUser().getUserId()%>';
@@ -69,7 +60,7 @@
 				});
 			}
 		}
-	
+
 	$('#contactUsLink').click(function(clickEvent) {
 
 		showDialog('#contactTeamDialog',false);
@@ -82,7 +73,7 @@
 
 	$("#logoutLink").click(function(clickEvent) {
 		window.location.href = "j_spring_security_logout";
-	});	
+	});
 
 
 		$('#cancelPublishToJiraActionModalButton').click(
@@ -141,7 +132,7 @@
 				$('#jiraProjectSpan').text($(this).val());
 			}
 
-		});	
+		});
 	});
 	function openNav(elt) {
 		    $('body').css('foreground-color','red');
@@ -155,17 +146,59 @@
 	    $('body').removeClass('html_overlay');
 	    document.getElementById(elt.parentNode.id).style.width = "0%";
 	    $(elt.parentNode).removeClass('overlay_border');
-	}	
+	}
 	function openJIRADialog(comp){
 	selectedIssueId = comp.getAttribute("issueId");
 	selectedReportId = comp.getAttribute("reportId");
-	
+
 	'use strict';
 		$(ID_SUBMIT_TO_JIRA_MODAL_WINDOW).modal({
 		keyboard : false,
 		backdrop : 'static'
 		});
-	}	
+	}
+
+	function markFP(comp){
+		commentsIssueId = comp.getAttribute("issueId");
+		selectedReportId = comp.getAttribute("reportId");
+		var textAreaComp = $('textarea[commentsIssueId='+commentsIssueId+']');
+		var dropdownComp = $('select[reasonIssueId='+commentsIssueId+']');
+		//alert("dropdownComp.val()="+dropdownComp.val());
+		if (dropdownComp.val() == -1){
+			alert("Please select a reason to mark the issue as false positive.");
+			return false;
+		}
+
+		var comments = textAreaComp.val();
+
+		if (dropdownComp.val() == 1000 && comments.trim().length==0){
+			alert("Please select either the false positive reason or enter the comments.");
+			return false;
+		}
+		var data = {issueId:commentsIssueId, reportId : selectedReportId, comments:comments, fpReasonId : dropdownComp.val()};
+		$.ajax({
+			type : "POST",
+			url : "rest/v1/mark_fp",
+			async : false,
+			headers : {
+				"Content-Type" : "application/json"
+			},
+			data : JSON.stringify(data),
+			success : function(serverRespone) {
+				responseJsonObject = JSON.parse(serverRespone);
+				textAreaComp.replaceWith(comments);
+				comp.hide();
+			},
+			error : function() {
+				alert('There is some problem in updating the comments.');
+			}
+		});
+	}
+	function showAll(showAllflag){
+		angular.element($("[ng-controller='ReportController']")).scope().showAll(showAllflag);
+		angular.element($("[ng-controller='ReportController']")).scope().$apply();
+	}
+
 </script>
 <script src="js/batch_report_table.js"></script>
 </head>
@@ -191,7 +224,7 @@
 					</div>
 
 					<div id="jiraProjectDisplayDiv" style="display: none">
-						https://JIRA_URL.com/jira/browse/<span id="jiraProjectSpan"></span>
+						https://jira.hostname.domain.com/jira/browse/<span id="jiraProjectSpan"></span>
 					</div>
 					<!-- <img width="100%" height="100%" src="images/comingSoon.png" />
 					 -->
@@ -206,11 +239,8 @@
 						class="btn btn-primary">Publish</button>
 				</div>
 			</div>
-			<!-- /.modal-content -->
 		</div>
-		<!-- /.modal-dialog -->
 	</div>
-	<!-- /.modal -->
 
 	<div class="modal fade" id="errorInPageDialog">
 		<div class="modal-dialog">
@@ -269,7 +299,7 @@
 
 				<span class="navbar-brand"> <img
 					style="max-width: 40px; max-heigth: 40px; margin-top: -7px;"
-					src="images/imageMagnifier.jpg" /> <span>DAST Proxy 3.0</span>
+					src="images/imageMagnifier.jpg" /> <span>DAST Proxy 5.0 beta</span>
 
 				</span>
 			</div>
@@ -278,7 +308,6 @@
 					<li id="recordedScanTab" class="pointerCursor"><a id="recordedScanTabLink" href="/DASTProxy">Home</a></li>
 					<li id="spiderScanTab" class="pointerCursor"><a id="spiderScanTabLink" href="/DASTProxy/dashboard">Dashboard</a></li>
 					<li id="spiderScanTab" class="active pointerCursor"><a id="spiderScanTabLink" href="/DASTProxy/scan_batch_report?scanBatchId=${scanBatchId}">Scan Batch Report</a></li>
-
 				</ul>
 				<ul class="nav navbar-nav navbar-right">
 					<li class="dropdown"><a href="#" class="dropdown-toggle"
@@ -296,7 +325,7 @@
 	</div>
 <div class="container">
 	<div ng-controller="ScanController" id="sc_id">
-		<dir-pagination-controls boundary-links="true" on-page-change="pageChangeHandler(newPageNumber)" template-url="js/pagination/dirPagination.tpl.html" pagination-id="scan"></dir-pagination-controls>		
+		<dir-pagination-controls boundary-links="true" on-page-change="pageChangeHandler(newPageNumber)" template-url="js/pagination/dirPagination.tpl.html" pagination-id="scan"></dir-pagination-controls>
 		<h3>Scans of the Batch</h3>
 		<table class="CSSTableGenerator">
 			<tr>
@@ -310,70 +339,90 @@
 				<td><span class="no_data">No data available!</span></td>
 				<td>&nbsp;</td>
 				<td>&nbsp;</td>
-			</tr>					
+			</tr>
 			<tr dir-paginate="scan in scans | filter:q | itemsPerPage: pageSize" current-page="currentPage" pagination-id="scan">
 				<td >{{ scan.testCaseName }}</td>
 				<td >{{ scan.scanLastRun }}</td>
 				<td >{{ scan.setUpViaBluefin?'Yes':'No'}}</td>
-				<td >{{ scan.scanState}}</td>
+				<td ng-if="scan.scanState!='Suspended'">{{ scan.scanState}}</td>
+				<td ng-if="scan.scanState=='Suspended'">{{ scan.suspendedReason}}</td>
 			</tr>
 		</table>
 	</div>
 	<div ng-controller="ReportController" style="height: 400px;">
 		<dir-pagination-controls boundary-links="true" on-page-change="pageChangeHandler(newPageNumber)" template-url="js/pagination/dirPagination.tpl.html" pagination-id="scan_report_pagination"></dir-pagination-controls>
 		<h3>Issues of the Scan Batch</h3>
+		<div><input type="checkbox" onchange="showAll(this.checked)" id="ng-change-example1" /> Display Omitted Results</div>
 		<table class="CSSTableGenerator">
 			<tr>
+				<td>Details (Opens in New Window)</td>
 				<td>Test Case Name</td>
 				<td>Priority</td>
 				<td>Vulnerability</td>
 				<td>Test URL</td>
+				<td>Scan Engine</td>
 				<td>Test HTTP traffic</td>
 				<td>Original HTTP traffic</td>
 				<td>JIRA</td>
+				<td>False Positive Reason</td>
+				<td>FP Comments</td>
+				<td>Mark False Positive</td>
+
 			</tr>
 			<tr ng-if="issues.length === 0">
 				<td>&nbsp;</td>
 				<td>&nbsp;</td>
 				<td>&nbsp;</td>
-				<td><span class="no_data">No data available!</span></td>
 				<td>&nbsp;</td>
 				<td>&nbsp;</td>
 				<td>&nbsp;</td>
-			</tr>					
+				<td><span class="no_data">No issues found!</span></td>
+				<td>&nbsp;</td>
+				<td>&nbsp;</td>
+				<td>&nbsp;</td>
+				<td>&nbsp;</td>
+				<td>&nbsp;</td>
+
+			</tr>
 			<tr dir-paginate="issue in issues | filter:q | itemsPerPage: pageSize" current-page="currentPage" pagination-id="scan_report_pagination">
+				<td ><a target="_blank" href="{{issue.issueDastUrl}}">{{issue.issueId}}</a></td>
 				<td >{{ issue.testcaseName}}</td>
 				<td ng-if="issue.severity=='High'" style="background-color:red">{{ issue.severity }}</td>
 				<td ng-if="issue.severity=='Medium'" style="background-color:#FBB917">{{ issue.severity }}</td>
 				<td ng-if="issue.severity=='Low'" style="background-color:#cfcf00">{{ issue.severity }}</td>
 				<td ng-if="issue.severity=='Information'" style="background-color:#eeee00">{{ issue.severity }}</td>
+				<td ng-if="issue.severity=='Informational'" style="background-color:#eeee00">{{ issue.severity }}</td>
+
 				<td >{{ issue.issueType}}</td>
 				<td ><a target="_blank" href="{{issue.testUrl}}">{{issue.testUrl}}</a></td>
+				<td >{{issue.scanEngine}}</td>
 				<td>
 					<div class='overlay' id='{{issue.testHTTPDivId}}'><a href='javascript:void(0)' class='closebtn' onclick='closeNav(this)'>x</a><pre class='panel-body'>{{issue.testHTTPtraffic}}</pre></div>
-					<a href='javascript:void(0);' onclick='openNav(this)'>Click to Open</a>
+					<a href='javascript:void(0);' onclick='openNav(this)' ng-if="issue.scanEngine!='ZAP'">Click to Open</a>
 				</td>
 				<td>
 					<div class='overlay' id='{{issue.origHTTPDivId}}'><a href='javascript:void(0)' class='closebtn' onclick='closeNav(this)'>x</a><pre class='panel-body'>{{issue.origHTTPtraffic}}</pre></div>
-					<a href='javascript:void(0);' onclick='openNav(this)'>Click to Open</a>
+					<a href='javascript:void(0);' onclick='openNav(this)' ng-if="issue.scanEngine!='ZAP'">Click to Open</a>
 				</td>
-				
 				<td ng-if="issue.jiraURL==null"><a href='javascript:void(0);' reportId='{{issue.reportId}}' issueId='{{issue.issueId}}' onclick='openJIRADialog(this)'>Publish to JIRA</a></td>
-				<td ng-if="issue.jiraURL!=null"><a target="_blank" href='https://JIRA_URL.com/browse/{{issue.jiraURL}}'>Open in JIRA</a></td>
+				<td ng-if="issue.jiraURL!=null"><a target="_blank" href='https://jira.hostname.domain.com/browse/{{issue.jiraURL}}'>Open in JIRA</a></td>
+				<td>
+				    <select name="fpReason" ng-if="(issue.severity=='High' || issue.severity=='Medium') && issue.jiraURL==null && !issue.fp" id="singleSelect" reasonIssueId='{{issue.issueId}}' ng-disabled='{{issue.fp}}'>
+				      <option value="-1">---Please select---</option>
+				      <option value="1" ng-selected="{{issue.fpReasonId==1}}">Error Page - PNR</option>
+				      <option value="2" ng-selected="{{issue.fpReasonId==2}}">Error Page - Invalid char</option>
+				      <option value="1000" ng-selected="{{issue.fpReasonId==1000}}">Other</option>
+				    </select>
+				</td>
+				<td>
+					<textarea ng-if="(issue.severity=='High' || issue.severity=='Medium') && issue.jiraURL==null && !issue.fp" commentsIssueId='{{issue.issueId}}'></textarea>
+					<span ng-if="!((issue.severity=='High' || issue.severity=='Medium') && issue.jiraURL==null&& !issue.fp)">{{issue.fpComments}}</span>
+				</td>
+				<td width="8%">
+					<div ng-if="(issue.severity=='High' || issue.severity=='Medium') && issue.jiraURL==null && !issue.fp" id="mark_fp_button"><a href="javascript:void(0)" issueId='{{issue.issueId}}' reportId='{{issue.reportId}}' onclick="javascript:markFP(this);"><span class="mark_fp">Mark as FP</span></a></div>
+				</td>
 			</tr>
 		</table>
-	</div>
-</div>
-<div class="footer">
-	<div class="container">
-		<p class="text-muted">
-			Copyright &#169; 1995-2015 eBay Inc. All Rights Reserved <br />
-			CONFIDENTIALITY NOTICE: This website is intended only for eBay Inc.
-			employees, and may contain information that is privileged,
-			confidential and exempt from disclosure under applicable law. Use of
-			this website constitutes acceptance of our Code of Business Conduct,
-			Privacy Policy and eBay Mutual Nondisclosure Agreement.
-		</p>
 	</div>
 </div>
 </body>

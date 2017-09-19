@@ -1,19 +1,21 @@
 /**
- * 
- * This class acts as a notifier when the scan start 
+ *
+ * This class acts as a notifier when the scan start
  * This has code for:
- * 1. Scheduling a job 
+ * 1. Scheduling a job
  * 2. Checking the scan status
- * 3. Sending an email when scan starts running with the link that shows the 
+ * 3. Sending an email when scan starts running with the link that shows the
  *    scan metrics to respective user
  * 4. Sending a summary report for every scan completed to respective user
- * 
+ *
  * @author Rajvi Shah (rajvshah@paypal.com)
- * 
+ *
  */
 package com.dastproxy.services;
 
 import java.net.MalformedURLException;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,10 +24,8 @@ import javax.inject.Inject;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableAsync;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -34,16 +34,24 @@ import com.dastproxy.common.utils.AppScanUtils;
 import com.dastproxy.common.utils.MailUtils;
 import com.dastproxy.configuration.RootConfiguration;
 import com.dastproxy.dao.DastDAO;
+import com.dastproxy.model.DASTProxyException;
 import com.dastproxy.model.Issue;
+import com.dastproxy.model.Recording;
 import com.dastproxy.model.Report;
 import com.dastproxy.model.Scan;
-import com.dastproxy.services.impl.AppScanEnterpriseRestService;
+import com.dastproxy.model.User;
+import com.dastproxy.services.impl.ZapService;
 
 @Service
 public class ScanStatusNotifier {
 
 	private static final Logger LOGGER = LogManager.getLogger(ScanStatusNotifier.class.getName());
-	private DASTApiService dastApiService = new AppScanEnterpriseRestService();
+
+	@Autowired
+	private ZapService zapService;
+
+	@Autowired
+	private DASTApiService dastApiService;
 
 	@Inject
 	@Qualifier("dastDAOImpl")
@@ -65,7 +73,7 @@ public class ScanStatusNotifier {
 	}
 
 	/**
-	 * 
+	 *
 	 * @return dastApiService
 	 */
 	public DASTApiService getDastApiService() {
@@ -76,111 +84,113 @@ public class ScanStatusNotifier {
 		this.dastApiService = dastApiService;
 	}
 
-	// Email to be sent for scan running with the link
-	private void sendEmailForScanStatusToUser(final String userId,
-			final String scanId, final String scanName, final String state,
-			final String userFolderId) {
+	public ZapService getZapService() {
+		return zapService;
+	}
 
-		// parameters used to build an email template for scan status
-		Map<String, Object> model = new HashMap<String, Object>();
-		model.put("userId", userFolderId);
-		model.put("scanId", scanId);
-		model.put("scanName", scanName);
-		model.put("scanStatus", state);
-		model.put("baseURL", AppScanConstants.APPSCAN_JOB_SCAN_STATUS_URL);
-		model.put("contactUsSupportDl",
-				AppScanConstants.APPSCAN_CONTACT_US_SUPPORT_DL);
-
-		// Send email using Mail Utils
-
-		MailUtils.sendEmail(userId
-				+ RootConfiguration.getProperties().getProperty(AppScanConstants.EMAIL_DOMAIN),
-				AppScanConstants.APPSCAN_REPORT_SENDER,
-				AppScanConstants.APPSCAN_STATUS_FOR_SCAN + " \"" + scanName
-						+ "\"", model,
-				AppScanConstants.STATUS_MAIL_BODY_TEMPLATE);
+	public void setZapService(ZapService zapService) {
+		this.zapService = zapService;
 	}
 
 	// Email to be sent for a summary report of scan completed
-	private void sendReportAfterScanCompleteToUser(final String userId,
-			final String scanId, final String scanName, final String state,
-			final String userFolderId, List<Issue> issues, String testCaseName) {
+	private void sendReportAfterScanCompleteToUser(final String userId, final String scanId, final String scanName, final String state, List<Issue> issues, String testCaseName) {
 
 		// parameters used to build an email template for summary report
 		Map<String, Object> model = new HashMap<String, Object>();
-		model.put("userId", userFolderId);
 		model.put("scanId", scanId);
 		model.put("scanName", scanName);
 		model.put("issueDetails", issues);
 		model.put("testCaseName", testCaseName);
-
+		String cc = null;
+		if (issues!=null && issues.size() > 0) cc = RootConfiguration.getProperties().getProperty(AppScanConstants.REPORT_EMAIL_CC_ADDRESS_IF_ISSUES);
 		// Send email using Mail Utils
 		MailUtils.sendEmail(userId
-				+ RootConfiguration.getProperties().getProperty(AppScanConstants.EMAIL_DOMAIN),
+				+ RootConfiguration.getProperties().getProperty(AppScanConstants.EMAIL_DOMAIN),cc,
 				AppScanConstants.APPSCAN_REPORT_SENDER,
-				AppScanConstants.APPSCAN_REPORT_FOR_SCAN + " \"" + scanName
-						+ "\"", model,
+				AppScanConstants.APPSCAN_REPORT_FOR_SCAN + " \"" + scanName + "\"", model,
 				AppScanConstants.REPORT_MAIL_BODY_TEMPLATE);
 	}
 
 
-	@Scheduled(fixedRate = 120000)
+	@Scheduled(fixedRate = 360000)
 	public void scheduleJob() {
+
 		LOGGER.debug("Running ScanStatusNotifier");
 
 		if (RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_RUN_CRON_JOBS).equalsIgnoreCase("true")) {
-			try {
-				dastApiService.loginToDASTScanner(RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_ID_IDENTIFIER),
-								RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_PWD_IDENTIFIER));
+				String appScanAdminUserName =RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_ID_IDENTIFIER);
+				String appScanAdminPassword =RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_PWD_IDENTIFIER);
+				try{
+					dastApiService.loginToDASTScanner(appScanAdminUserName,appScanAdminPassword);
+				} catch (Exception exception){
+					LOGGER.error("Failed in logging to AppScan as administrator");
+					LOGGER.error(exception);
+				}
 				final List<Scan> listOfScansToBeTracked = getDao().getScansToBeTracked();
 
 				if (listOfScansToBeTracked != null) LOGGER.debug("Running ScanStatusNotifier..listOfScansToBeTracked="+listOfScansToBeTracked.size());
 				for (Scan eScan : listOfScansToBeTracked) {
-					//The following is a duplicate try, have to fix it. But if an exception is thrown while updating a status it is not processing the remaining transactions.
-					// Temporary fix. Need to optimize the try-catch statements in this method - Srinivas
+
+					LOGGER.debug("Processing the scan with id="+eScan.getId() +", submitted by"+eScan.getUser().getUserId());
+					LOGGER.debug("Processing the scan with id eScan.getReport()="+eScan.getReport() +", submitted by"+eScan.getUser().getUserId());
+
+					if (eScan.getReport() != null) LOGGER.debug("Processing the scan with id eScan.getReport().getAseReportId()="+eScan.getReport().getAseReportId() +", submitted by"+eScan.getUser().getUserId());
+
 					try{
-					String userId = dastApiService.checkIfUserPresent(eScan.getUser().getUserId());
-					LOGGER.debug("1..userId="+userId);
-					/*
-					if (!AppScanUtils.isNotNull(userId)) {
-						dastApiService.loginToDASTScanner(RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_ID_IDENTIFIER),
-								RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_PWD_IDENTIFIER));
+						if (eScan.getScanId() == null || eScan.getScanId().isEmpty() || eScan.getReport()==null || eScan.getReport().getAseReportId()==null || "".equals(eScan.getReport().getAseReportId())) {
+							try {
+								LOGGER.debug("Resubmitting the scan with id="+eScan.getId());
+								Recording recording = dao.getRecording(eScan.getRecordingId());
+								if (recording !=null && recording.getHarFilename() !=null)
+								dastApiService.setUpScanForUser(appScanAdminUserName, appScanAdminPassword,recording.getHarFilename().replace(AppScanConstants.HTD_FILE_EXTENSION,AppScanConstants.HAR_FILE_EXTENSION), null,true, eScan);
+								dao.mergeScan(eScan);
+
+							} catch(UnknownHostException uhe){
+								LOGGER.error("Trying to submit the scan from ScanStatusNotifier...UnknownHostException...uhe.getMessage()"+uhe.getMessage());
+								LOGGER.error(uhe);
+								eScan.setScanState(AppScanConstants.APPSCAN_JOB_SCAN_STATE_SUSPENDED);
+								eScan.setToBeTracked(false);
+								eScan.setSuspendedReason(AppScanConstants.DAST_SCAN_SUSPENDED_REASON_EXTERNAL_URLS);
+								getDao().saveScan(eScan);
+
+							} catch(Exception e){
+								LOGGER.error("Trying to submit the scan from ScanStatusNotifier."+e);
+							}
+							continue;
+						}
+
+						User user = dao.getUser(eScan.getUser().getUserId());
+					
+					String userId = eScan.getUser().getAppScanUserId();
+					if (userId==null){
 						userId = dastApiService.checkIfUserPresent(eScan.getUser().getUserId());
-					}
-					*/
-					boolean isScanNotPresentForUser = dastApiService.checkIfScanIsNotPresentForUser(userId,eScan.getScanId());
-					LOGGER.debug("1..checkIfScanIsNotPresentForUser="+isScanNotPresentForUser);
-					/*
-					if (isScanNotPresentForUser){
-						dastApiService.loginToDASTScanner(RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_ID_IDENTIFIER),
-								RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_PWD_IDENTIFIER));
-						try {
-							isScanNotPresentForUser = dastApiService.checkIfScanIsNotPresentForUser(userId,eScan.getScanId());
-						} catch (Exception e){
-							isScanNotPresentForUser = true;
+						LOGGER.debug("0.91..........userId from AppScan="+userId);
+						if (userId==null){
+							eScan.setScanState(AppScanConstants.APPSCAN_JOB_SCAN_STATE_SUSPENDED);
+							eScan.setSuspendedReason(AppScanConstants.DAST_SCAN_SUSPENDED_REASON_NO_ASE_FOLDER);
+							eScan.setToBeTracked(false);
+							getDao().saveScan(eScan);
+						} else {
+							user.setAppScanUserId(userId);
+							dao.saveGenericEntity(user);
 						}
 					}
-					LOGGER.debug("2..userId="+userId);
-					LOGGER.debug("2..checkIfScanIsNotPresentForUser="+isScanNotPresentForUser);
-					*/
+					LOGGER.debug("1..........userId="+userId);
+					
 
-					if (!AppScanUtils.isNotNull(userId) || isScanNotPresentForUser) {
-						//eScan.setToBeTracked(false);
-						//getDao().saveScan(eScan);
-						continue;
-					}
 					final String scanState = dastApiService.checkForScanStarted(eScan.getScanId());
+					LOGGER.debug("1.........scanState="+scanState+ " for scan with id ="+eScan.getScanId());
 
 					if (scanState.equals(AppScanConstants.APPSCAN_JOB_SCAN_STATE_SUSPENDED)) {
 						//sendEmailForScanStatusToUser(eScan.getUser().getUserId(),checkForScanId,eScan.getScanName(),AppScanConstants.APPSCAN_JOB_SCAN_STATE_SUSPENDED,userId);
-								eScan.setScanState(scanState);
-								eScan.setToBeTracked(false);
-								getDao().saveScan(eScan);
+						eScan.setScanState(scanState);
+						eScan.setToBeTracked(false);
+						getDao().mergeScan(eScan);
 					} else if (scanState.equals(AppScanConstants.APPSCAN_JOB_SCAN_STATE_RUNNING)) {
 						//sendEmailForScanStatusToUser(eScan.getUser().getUserId(),checkForScanId,eScan.getScanName(),AppScanConstants.APPSCAN_JOB_SCAN_STATE_RUNNING,userId);
 						if (!eScan.getScanState().equals(AppScanConstants.APPSCAN_JOB_SCAN_STATE_RUNNING)){
-									eScan.setScanState(scanState);
-									getDao().saveScan(eScan);
+							eScan.setScanState(scanState);
+							getDao().mergeScan(eScan);
 						}
 					} else if (scanState.equals(AppScanConstants.APPSCAN_JOB_SCAN_STATE_READY)){
 						LOGGER.debug("Updating the report as the scan jod is finished in the backend...scanId="+eScan.getScanId());
@@ -189,50 +199,91 @@ public class ScanStatusNotifier {
 						LOGGER.debug("Updating the report...eScan.getScanLastRun()="+eScan.getScanLastRun());
 
 						if (AppScanUtils.isNotNull(latestLastRunForScan) && !latestLastRunForScan.equalsIgnoreCase(eScan.getScanLastRun())) {
-							LOGGER.debug("Updating the report...eScan.getReport().getReportId()="+eScan.getReport().getReportId());
+							LOGGER.debug("Updating the report...eScan.getReport().getReportId()="+eScan.getReport().getAseReportId());
 
-							final String latestLastRunForScanReport = dastApiService.getLatestRunForScanReport(eScan.getReport().getReportId());
-							final String lastRunForScanReport = eScan.getReport().getReportLastRun();
+							final String latestLastRunForScanReport = dastApiService.getLatestRunForScanReport(eScan.getReport().getAseReportId());
 							LOGGER.debug("Updating the report...latestLastRunForScanReport="+latestLastRunForScanReport);
 
-							if (AppScanUtils.isNotNull(latestLastRunForScanReport)&& !latestLastRunForScanReport.equalsIgnoreCase(lastRunForScanReport)) {
-								String reportFromScanEngine = dastApiService.getReport(eScan.getReport().getReportId());
+							//&& !latestLastRunForScanReport.equalsIgnoreCase(lastRunForScanReport)
+							if (AppScanUtils.isNotNull(latestLastRunForScanReport)) {
+
+								String reportFromScanEngine = dastApiService.getReport(eScan.getReport().getAseReportId());
 								LOGGER.debug("Updating the report...reportFromScanEngine="+reportFromScanEngine);
+								LOGGER.debug("Updating the report...eScan.getReport().getId()="+eScan.getReport().getId());
 
 								if (AppScanUtils.isNotNull(reportFromScanEngine)) {
 									LOGGER.debug("Updating the report...");
 									Report scanReport = eScan.getReport();
-									scanReport.setIssues(dastApiService.getIssuesFromReport(eScan.getScanId(),eScan.getReport(),reportFromScanEngine));
+									LOGGER.debug("Updating the report...Before adding ASE...scanReport.getIssues().size()="+scanReport.getIssues().size() + " for eScan.getReport().getId()="+eScan.getReport().getId());
+									List<Issue> issuesFromASE = dastApiService.getIssuesFromReport(eScan.getScanId(),eScan.getReport(),reportFromScanEngine);
+									scanReport.getIssues().addAll(issuesFromASE);
+									LOGGER.debug("Updating the report...After adding ASE...scanReport.getIssues().size()="+scanReport.getIssues().size() + " for eScan.getReport().getId()="+eScan.getReport().getId());
+									LOGGER.debug("Updating the report...issuesFromASE.size()="+issuesFromASE.size() + " for eScan.getReport().getId()="+eScan.getReport().getId());
+									LOGGER.debug("Updating the report...eScan.getReport().getIssues()="+eScan.getReport().getIssues());
+									dao.saveGenericEntity(scanReport);
+
 									List<Issue> issuesInScan = AppScanUtils.returnDASTProxyRelativeUrlIssueList(scanReport);
-									if (!eScan.isSetUpViaBluefin())
-									sendReportAfterScanCompleteToUser(eScan.getUser().getUserId(),eScan.getScanId(),eScan.getScanName(),AppScanConstants.APPSCAN_JOB_SCAN_STATE_COMPLETED,userId, issuesInScan,eScan.getTestCaseName());
+									if (!eScan.isSetUpViaBluefin() || user.getEnableEmailForAutomatedScan())
 									eScan.getReport().setReportLastRun(latestLastRunForScanReport);
-												eScan.setEmailSent(false);
-												eScan.setScanLastRun(latestLastRunForScan);
-												eScan.setScanState(scanState);
-												eScan.setReport(scanReport);
-												eScan.setToBeTracked(false);
-												getDao().saveScan(eScan);
-											}
-										}
-									}
+									eScan.setEmailSent(false);
+									eScan.setScanLastRun(latestLastRunForScan);
+									eScan.setScanState(scanState);
+									eScan.setReport(scanReport);
+									eScan.setToBeTracked(false);
+									
+									dao.saveGenericEntity(eScan.getReport());
+									if (eScan.isNightlyScan()) eScan.setNightlyState(Scan.NIGHTLY_SCAN_STATE_COMPLETED);
+									getDao().mergeScan(eScan);
+									System.out.println("*************************************7");
+									if (!eScan.isNightlyScan())
+										sendReportAfterScanCompleteToUser(eScan.getUser().getUserId(),eScan.getScanId(),eScan.getScanName(),AppScanConstants.APPSCAN_JOB_SCAN_STATE_COMPLETED, filterIssueForEmail(eScan.getReport().getIssues()),eScan.getTestCaseName());
+
+								} else {
+									eScan.setScanState(AppScanConstants.APPSCAN_JOB_SCAN_STATE_SUSPENDED);
+									eScan.setSuspendedReason(AppScanConstants.DAST_SCAN_SUSPENDED_REASON_BACKEND_ISSUE);
+									eScan.setToBeTracked(false);
+									getDao().saveScan(eScan);
 								}
+							}
+						} else {
+							eScan.setScanState(AppScanConstants.APPSCAN_JOB_SCAN_STATE_SUSPENDED);
+							eScan.setSuspendedReason(AppScanConstants.DAST_SCAN_SUSPENDED_REASON_BACKEND_ISSUE);
+							eScan.setToBeTracked(false);
+							getDao().saveScan(eScan);
+	
+						}
+					} 
 					} catch (MalformedURLException exception) {
+						System.out.println("*************************************8");
 						LOGGER.error("A " + exception.getClass().getSimpleName()+ " has occured in the application in the scheduler. ",exception);
+					} catch (DASTProxyException dastProxyException) {
+						System.out.println("*************************************8.5");
+						LOGGER.error("A " + dastProxyException.getClass().getSimpleName()+ " has occured in the application in the scheduler. ",dastProxyException);
+						if (dastProxyException.getErrorCode().equals(AppScanConstants.DAST_SCAN_SUSPENDED_REASON_NO_ASE_FOLDER_CODE)){
+							eScan.setScanState(AppScanConstants.APPSCAN_JOB_SCAN_STATE_SUSPENDED);
+							eScan.setToBeTracked(false);
+							eScan.setSuspendedReason(AppScanConstants.DAST_SCAN_SUSPENDED_REASON_NO_ASE_FOLDER);
+							getDao().saveScan(eScan);
+						}
+						//AppScanUtils.sendErrorMail(exception);
 					} catch (Exception exception) {
+						System.out.println("*************************************9");
 						LOGGER.error("A " + exception.getClass().getSimpleName()+ " has occured in the application in the scheduler. ",exception);
-						AppScanUtils.sendErrorMail(exception);
+						//AppScanUtils.sendErrorMail(exception);
 					}
 				}
 
-			} catch (MalformedURLException exception) {
-				LOGGER.error("A " + exception.getClass().getSimpleName()+ " has occured in the application in the scheduler. ",exception);
-			} catch (Exception exception) {
-				LOGGER.error("A " + exception.getClass().getSimpleName()+ " has occured in the application in the scheduler. ",exception);
-				AppScanUtils.sendErrorMail(exception);
-			}
 		} else {
 			LOGGER.debug("Cron Jobs have been disabled. Exitting from ScanStatusNotifier");
 		}
+	}
+
+	List<Issue> filterIssueForEmail(List<Issue> listOfIssues){
+		List<Issue> filteredListOfIssuesForEmail = new ArrayList<Issue>();
+		for (Issue issue: listOfIssues){
+			if ((issue.getSeverity().equals("High") || issue.getSeverity().equals("Medium")) && !issue.isFp())
+				filteredListOfIssuesForEmail.add(issue);
+		}
+		return filteredListOfIssuesForEmail;
 	}
 }

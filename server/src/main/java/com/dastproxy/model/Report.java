@@ -6,6 +6,8 @@ import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.OneToMany;
@@ -24,12 +26,15 @@ public class Report implements Serializable{
 	private static final long serialVersionUID = 4748763213168527210L;
 
 	@Id
+	@Column(name="id")
+	@GeneratedValue(strategy=GenerationType.IDENTITY)
+	private Long id;
+
 	@Column(name="report_id")
-	private String reportId;
+	private String aseReportId;
 	
 	@Column(name="report_last_run", nullable=true)
 	private String reportLastRun;
-	
 	
 	/*
 	 * 
@@ -37,7 +42,7 @@ public class Report implements Serializable{
 	 * 
 	 */
 	@JsonIgnore
-	@OneToMany(fetch=FetchType.EAGER, mappedBy="issuePrimaryKey.report")
+	@OneToMany(fetch=FetchType.EAGER, mappedBy="report")
 	@Cascade(CascadeType.ALL)
 	@Nullable
 	private List<Issue> issues;
@@ -45,14 +50,14 @@ public class Report implements Serializable{
 	/**
 	 * @return the reportId
 	 */
-	public String getReportId() {
-		return reportId;
+	public String getAseReportId() {
+		return aseReportId;
 	}
 	/**
 	 * @param reportId the reportId to set
 	 */
-	public void setReportId(final String reportId) {
-		this.reportId = reportId;
+	public void setAseReportId(final String aseReportId) {
+		this.aseReportId = aseReportId;
 	}
 	
 	/**
@@ -80,6 +85,9 @@ public class Report implements Serializable{
 	 */
 	public void setIssues(final List<Issue> issues) {
 		this.issues = issues;
+	}
+	public Long getId() {
+		return id;
 	}
 	
 }

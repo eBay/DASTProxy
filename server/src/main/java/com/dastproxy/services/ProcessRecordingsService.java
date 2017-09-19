@@ -5,12 +5,14 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import javax.inject.Inject;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -24,8 +26,11 @@ import com.dastproxy.model.DASTProxyException;
 import com.dastproxy.model.ProxyEntity;
 import com.dastproxy.model.Recording;
 import com.dastproxy.model.RecordingBatch;
+import com.dastproxy.model.Report;
 import com.dastproxy.model.Scan;
 import com.dastproxy.model.ScanBatch;
+import com.dastproxy.model.User;
+import com.dastproxy.services.impl.ZapService;
 
 @Service
 public class ProcessRecordingsService {
@@ -44,7 +49,11 @@ public class ProcessRecordingsService {
 	@Inject
 	@Qualifier("dastDAOImpl")
 	private DastDAO dao;
+	
+	@Autowired
+	private ZapService zapService;
 
+	
 	/**
 	 * @return the browserMobServiceBean
 	 */
@@ -114,8 +123,25 @@ public class ProcessRecordingsService {
 							final String nameOfScan = proxyEntity.getScanConfiguration().getNameOfScan();
 							final boolean startScanAutomatically = proxyEntity.getScanConfiguration().isStartScan();
 
+
 							final String filePath = new StringBuilder(AppScanConstants.USER_HTD_FILES_LOCATION).append(File.separator).append(proxyEntity.getUser().getUserId()).append(File.separator).append(proxyEntity.getProxy().getHtdFileName()).toString();
-							final Scan successfullySetUpScan = dastApiService.setUpScanForUser(proxyEntity.getUser().getUserId(), "", filePath,nameOfScan, startScanAutomatically);
+							Scan successfullySetUpScan = new Scan();
+							successfullySetUpScan.setReport(new Report());
+							successfullySetUpScan.setFirstSetUp(new Date());
+							successfullySetUpScan.setToBeTracked(true);
+							successfullySetUpScan.setScanState(AppScanConstants.APPSCAN_JOB_READY_FOR_SCAN);
+							
+							if (successfullySetUpScan.getReport()==null) {
+								successfullySetUpScan.setReport(new Report());
+								successfullySetUpScan.getReport().setAseReportId("");
+								dao.saveGenericEntity(successfullySetUpScan.getReport());
+							}
+							
+							User user = new User();
+							user.setUserId(proxyEntity.getUser().getUserId());
+							successfullySetUpScan.setUser(user);
+
+							dastApiService.setUpScanForUser(proxyEntity.getUser().getUserId(), "", filePath,nameOfScan, startScanAutomatically, successfullySetUpScan);
 							if (AppScanUtils.isNotNull(successfullySetUpScan)) {
 
 								successfullySetUpScan.setSetUpViaBluefin(true);
@@ -139,7 +165,7 @@ public class ProcessRecordingsService {
 								Recording recording = dastUtils.createRecording(proxyEntity.getTestCaseName(), proxyEntity.getUser().getUserId(), filePath);
 								RecordingBatch recordingBatch = dao.getRecBatchByTsDynamicIdentifier(proxyEntity.getUser().getUserId(), successfullySetUpScan.getTsDynamicIdentifier());
 								if ( recordingBatch == null){
-									recordingBatch = dastUtils.createRecordingBatch(proxyEntity.getTestCaseSuiteName(), proxyEntity.getUser().getUserId(), false);
+									recordingBatch = dastUtils.createRecordingBatch(proxyEntity.getTestCaseSuiteName(), proxyEntity.getUser().getUserId(), false, false);
 									recordingBatch.setTestsuiteDynamicIdentifier(successfullySetUpScan.getTsDynamicIdentifier());
 									dao.saveGenericEntity(recordingBatch);
 								}
@@ -163,27 +189,9 @@ public class ProcessRecordingsService {
 								dao.saveScan(successfullySetUpScan);
 								dao.removeEntity(proxyEntity);
 
-								/*
-								Map<String, Object> model = new HashMap<String, Object>();
-								model.put("scanName",
-										successfullySetUpScan.getScanName());
-								model.put("testCaseName",
-										successfullySetUpScan.getTestCaseName());
-								model.put(
-										"contactUsSupportDl",
-										AppScanConstants.APPSCAN_CONTACT_US_SUPPORT_DL);
-								MailUtils
-										.sendEmail(
-												successfullySetUpScan.getUser()
-														.getUserId()
-														+ RootConfiguration.getProperties().getProperty(AppScanConstants.EMAIL_DOMAIN),
-												AppScanConstants.APPSCAN_REPORT_SENDER,
-												successfullySetUpScan
-														.getScanName()
-														+ " is Successfully set up",
-												model,
-												AppScanConstants.SCAN_SETUP_MAIL_BODY_TEMPLATE);
-								*/
+								zapService.scanWithZap(recording.getHarFilename(), successfullySetUpScan.getReport());
+								dao.saveGenericEntity(successfullySetUpScan.getReport());
+
 							}
 						} else {
 
@@ -195,14 +203,13 @@ public class ProcessRecordingsService {
 
 						}
 					} catch(IOException ioException){
-						LOGGER.error("Inside ProcessRecordingsService IOException...");
 						LOGGER.error(ioException);
 						continue;
 					}
 					catch (Exception exception) {
 						exception.printStackTrace();
 						LOGGER.error("Error in processSubmittedRecording while trying to set up a scan for a particular Bluefin/Breeze/Selenium scan submission. The error is : "+ exception);
-
+						LOGGER.error("exception.getErrorCode() = "+ ((DASTProxyException) exception).getErrorCode());
 						// There is a possibility that the scans set up via
 						// Bluefin/Breeze/Selenium could contain only external
 						// URLS. In that case
@@ -232,7 +239,7 @@ public class ProcessRecordingsService {
 								continue;
 							}
 						}
-						
+
 						if(AppScanUtils.isNotNull(exception) && AppScanUtils.isNotNull(exception.getCause())){
 							proxyEntity.setErrorMessage(exception.getCause().toString());
 							dao.saveEntity(proxyEntity);

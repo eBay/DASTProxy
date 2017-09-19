@@ -1,6 +1,7 @@
 .CSSTableGenerator {
 	margin:0px;padding:0px;
 	width:100%;
+	/*box-shadow: 10px 10px 5px #888888;*/
 	border:1px solid #000000;
 	
 	-moz-border-radius-bottomleft:0px;

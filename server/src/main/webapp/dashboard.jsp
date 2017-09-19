@@ -9,7 +9,7 @@
 <meta name="author" content="">
 <link rel="icon" href="images/Interceptor.ico">
 
-<title>DASTProxy v3.0</title>
+<title>DASTProxy 5.0 beta</title>
 
 <!-- Bootstrap core CSS -->
 <link href="css/bootstrap.min.css" rel="stylesheet">
@@ -130,22 +130,75 @@
 			}
 		});
 	}
+	
+	function addToNightlyRecordings () {
+		selectedRecordingIds = selectedRecordingIds.replace(/,,+/g, '-').replace(/,+/g, '-');
+		var url = "addtonightlyrecordingbatch/v1/" + selectedRecordingIds+"/"+batchId;
+		closeNavNightly();
+		$.ajax({
+			type : "GET",
+			url : url,
+			async : true,
+			dataType : "json",
+			beforeSend: function () {
+			    $('#scan_message_nightly').show().hide().show();
+			},			
+			success : function(serverRespone) {
+				if (serverRespone.data == "success") {
+					angular.element($("[ng-controller='ScanController']")).scope().refreshData();									
+					angular.element($("[ng-controller='ScanController']")).scope().$apply();					
+				} else {
+					$('#scan_message_nightly').hide();
+					$('#scan_error').show();
+				}
+			},
+			error : function() {
+				$('#scan_error').show();
+			}
+		});
+	}
+	
 	function selectForScan(comp){
 		batchId = comp.getAttribute("batchId");
 		angular.element($("[ng-controller='SelectRecordingController']")).scope().setBatchId(batchId);
 		angular.element($("[ng-controller='SelectRecordingController']")).scope().$apply();
 		openNav();
 	}
+	function addToNightlyBatch(comp){
+		batchId = comp.getAttribute("batchId");
+		angular.element($("[ng-controller='SelectRecordingController']")).scope().setBatchId(batchId);
+		angular.element($("[ng-controller='SelectRecordingController']")).scope().$apply();
+		openNavNightly();
+	}	
+	
 	function openNav() {
 	    $('#overlayDiv').css("width", "100%");
 	    $("#overlayDiv").addClass("overlay_border");
+	    $("#add_to_nightly_sub").hide();
+	    $("#start_scan_sub").show();
+	    $("#overlay_header").html("Select Recordings To Start Scan");
 	}
 
 	function closeNav() {
 	    $('#overlayDiv').css("width", "0%");
 	    $("#overlayDiv").removeClass('overlay_border');
-	    
+	    $("#start_scan_sub").hide();
+
 	}	
+	function openNavNightly() {
+	    $('#overlayDiv').css("width", "100%");
+	    $("#overlayDiv").addClass("overlay_border");
+	    $("#add_to_nightly_sub").show();
+	    $("#start_scan_sub").hide();
+	    $("#overlay_header").html("Select Recordings To Move to Nightly Recording Batch");
+	}
+
+	function closeNavNightly() {
+	    $('#overlayDiv').css("width", "0%");
+	    $("#overlayDiv").removeClass('overlay_border');
+	    $("#add_to_nightly_sub").hide();
+	    
+	}		
 	function processSelection(comp){
 		var selectedId = comp.getAttribute("recordingId");
 		var selectedIndex = comp.getAttribute("index");
@@ -175,9 +228,7 @@
 						class="icon-bar"></span>
 				</button>
 
-				<span class="navbar-brand"> <img
-					style="max-width: 40px; max-heigth: 40px; margin-top: -7px;"
-					src="images/imageMagnifier.jpg" /> <span>DAST Proxy 3.0</span>
+				<span class="navbar-brand"> <img style="max-width: 40px; max-heigth: 40px; margin-top: -7px;" src="images/imageMagnifier.jpg" /> <span>DAST Proxy 5.0 beta</span>
 
 				</span>
 			</div>
@@ -202,6 +253,7 @@
 	</div>
 <div class="container">
 	<div id="scan_message" class="success" style="display:none;"><span>A scan is submitted from the selected recordings. Please check the status in the scans table below in few seconds.</span></div>
+	<div id="scan_message_nightly" class="success" style="display:none;"><span>The selected scans are successfully moved to the nightly batch.</span></div>
 	<div id="scan_error" class="error" style="display:none;"><span class="message">There is some problem in starting the scan. Please try again or contact the administrator.</span></div>
 	<div ng-controller="TsRecController">
 		<dir-pagination-controls boundary-links="true" on-page-change="pageChangeHandler(newPageNumber)" template-url="js/pagination/dirPagination.tpl.html" pagination-id="recording"></dir-pagination-controls>
@@ -210,6 +262,7 @@
 			<tr>
 				<td>Test Suite Name</td>
 				<td>Owner</td>
+				<td>Move to Nightly Batch</td>
 				<td>Scan Selected</td>
 				<td>Scan All</td>
 			</tr>
@@ -218,10 +271,12 @@
 				<td>&nbsp;</td>
 				<td><span class="no_data">No data available!</span></td>
 				<td>&nbsp;</td>
-			</tr>			
+				<td>&nbsp;</td>
+			</tr>
 			<tr dir-paginate="batch in batches | filter:q | itemsPerPage: pageSize" current-page="currentPage" pagination-id="recording">
 				<td >{{ batch.testsuiteName}}</td>			
 				<td >{{ batch.owner }}</td>
+				<td ><a href="javascript:void(0);" batchId="{{batch.id}}" onclick="addToNightlyBatch(this);">Move to Nightly Batch</a></td>
 				<td ><a href="javascript:void(0);" batchId="{{batch.id}}" onclick="selectForScan(this);">Scan Selected</a></td>
 				<td ><a href="javascript:void(0);" id="{{batch.id}}" onclick="startScanFromRecording(this.id);">Scan All</a></td>
 			</tr>
@@ -231,7 +286,7 @@
 		<a href='javascript:void(0)' class='closebtn' onclick='closeNav(this)'>x</a>
 		<div ng-controller="SelectRecordingController" style="width:90%; align: center; margin-top: 100px;margin-left: 90px;line-height:inherit;" id="recordings_sec">
 			<dir-pagination-controls boundary-links="true" on-page-change="pageChangeHandler(newPageNumber)" template-url="js/pagination/dirPagination.tpl.html" pagination-id="selected"></dir-pagination-controls>
-			<h3>Select Recordings To Start Scan</h3>
+			<h3 id='overlay_header'></h3>
 			<table class="CSSTableGenerator">
 				<tr>
 					<td>Select</td>
@@ -253,7 +308,8 @@
 				</tr>
 			</table>
 		</div>
-		<div class='submit_btn' onClick="scanSelectedRecordings()">Start Scan of Selected Recordings</div>
+		<div id='start_scan_sub' class='submit_btn' onClick="scanSelectedRecordings()" style="display:none;">Start Scan of Selected Recordings</div>
+		<div id='add_to_nightly_sub' class='submit_btn' onClick="addToNightlyRecordings()" style="display:none;">Move to Nightly Scan</div>
 	</div>
 	<div ng-controller="ScanController" id="sc_id">
 		<dir-pagination-controls boundary-links="true" on-page-change="pageChangeHandler(newPageNumber)" template-url="js/pagination/dirPagination.tpl.html" pagination-id="scan"></dir-pagination-controls>		
@@ -261,6 +317,7 @@
 		<table class="CSSTableGenerator" id='scan_table'>
 			<tr>
 				<td>Scan Name</td>
+				<td>Created By</td>
 				<td>Scan Run Date</td>
 				<td>Status</td>
 				<td>Report</td>
@@ -270,9 +327,11 @@
 				<td>&nbsp;</td>
 				<td><span class="no_data">No data available!</span></td>
 				<td>&nbsp;</td>
+				<td>&nbsp;</td>
 			</tr>				
 			<tr dir-paginate="sb in batchscans | filter:q | itemsPerPage: pageSize" current-page="currentPage" pagination-id="scan">
 				<td>{{sb.testsuiteName}}</td>
+				<td>{{sb.owner}}</td>
 				<td>{{sb.dateCreated}}</td>
 				<td>{{sb.displayStatus}}</td>
 				<td><a href='scan_batch_report?scanBatchId={{sb.id}}'>Click here to go to report page</a></td>
@@ -280,18 +339,5 @@
 		</table>
 	</div>
 </div>
-<div class="footer">
-	<div class="container">
-		<p class="text-muted">
-			Copyright &#169; 1995-2015 eBay Inc. All Rights Reserved <br />
-			CONFIDENTIALITY NOTICE: This website is intended only for eBay Inc.
-			employees, and may contain information that is privileged,
-			confidential and exempt from disclosure under applicable law. Use of
-			this website constitutes acceptance of our Code of Business Conduct,
-			Privacy Policy and eBay Mutual Nondisclosure Agreement.
-		</p>
-	</div>
-</div>
-
 </body>
 </html>

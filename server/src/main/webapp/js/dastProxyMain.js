@@ -1,11 +1,11 @@
 /*
  * This is the main Java Script file of the application. I have designed the JavaScript functionality on a MVC structure
- * 
- * 						
- * 			
+ *
+ *
+ *
  * 				 					to update the view, invoke
  * 					Controller   --------------------------------> View
- * 					     	
+ *
  * 						|
  * 						|
  * 						|    Get data from the server
@@ -14,29 +14,30 @@
  * 						|
  * 			            v
  *   				   Model
- *   
+ *
  *   All the files are based on the above structure. Currently there are only three files dastProxyMainModel.js, dastProxyMainView.js and this file. Based on concept mimicking namespace, I have put all functionality
  *   of the view under the view file. So if you need to see functionality that updates the view, then check there. If you want to see where data is being received from the server, then check the
  *   model files. For everything else, check the controller files.
- * 
- * @Author Kiran Shirali (kshirali@ebay.com) 
+ *
+ * @Author Kiran Shirali (kshirali@ebay.com)
  */
 
 var loggedInUser;
 var recordingName;
+var testsuiteName;
 
 // Handler for .ready() called.
 $(document).ready(function() {
 	'use strict';
-	
-	initalStartUp();	
+
+	initalStartUp();
 	$('textarea').maxlength({
         alwaysShow: true
     });
-	
+
 	$('#stopRecordingSubmitAction').click(function(clickEvent) {
 		'user strict';
-		
+
 		var optionSelected = '#' + $('#carouselForStopRecordingOptions .carousel-inner div.active').attr('id');
 		//alert(optionSelected);
 		view.closeModalWindow(ID_APPLICATION_SUBMIT_RECORDING_OPTIONS_MODAL_WINDOW);
@@ -44,11 +45,11 @@ $(document).ready(function() {
 		view.updateProxyDetailsView('','','');
 		view.hideStopRecordingHomePageOption();
 		view.showStartRecordingHomePageOption();
-		
+
 		if(optionSelected === ID_SET_UP_SCAN_ON_APPSCAN){
-			
+
 			view.showApplicationPrgoressModalWindow("Setting Up a Scan on IBM AppScan Enterprise for " + loggedInUser.userId,"50%");
-			var responseObject = model.getScanSetUp(loggedInUser.userId, recordingName);
+			var responseObject = model.getScanSetUp(loggedInUser.userId, recordingName, testsuiteName);
 			if(responseObject.error == null || responseObject.error == undefined ){
 				view.closeModalWindow(ID_APPLICATION_PROGRESS_BAR_MODAL_WINDOW);
 				view.showDialog(ID_APPLICATION_SCAN_SET_UP_SUCCESSFUL_NOTIFICATION_DIALOG, true);
@@ -61,7 +62,7 @@ $(document).ready(function() {
 				view.closeModalWindow(ID_APPLICATION_PROGRESS_BAR_MODAL_WINDOW);
 				view.showErrorDialogASE();
 			}
-			
+
 		}
 		else if(optionSelected === ID_GET_RECORDING_AS_HTD){
 			view.showApplicationPrgoressModalWindow("Creating HTD File for " + loggedInUser.userId,"50%");
@@ -84,52 +85,52 @@ $(document).ready(function() {
 			//close
 		}
 	});
-	
+
 
 	$("#proxyRecordAction").click(function(clickEvent) {
 		actionOnSetUpProxy(loggedInUser.userId);
 	});
-	
+
 	$("#recordStartedDialog,#recordInProgressDialog").on('hidden.bs.modal', function (e) {
 			view.hideStartRecordingHomePageOption();
 			view.showStopRecordingHomePageOption();
 	});
-	
+
 	$("#proxyStopRecordAction").click(function(clickEvent) {
 
 		view.showfileTypeDialog();
 	});
-	
+
 	$("#spiderScanTabLink").click(function(clickEvent) {
 
 		view.showSpiderScanPageView();
 	});
-	
+
 	$('#recordedScanTabLink').click(function(clickEvent) {
 
 		view.showRecordedScanPageView();
 	});
-	
+
 	$('#contactUsLink').click(function(clickEvent) {
 
 		view.showDialog(ID_APPLICATION_CONTACT_US_DIALOG,false);
 	});
-	
+
 	$('#helpLink').click(function(clickEvent) {
 
 		view.showDialog(ID_APPLICATION_HELP_DIALOG,true);
 	});
-	
+
 	$("#logoutLink").click(function(clickEvent) {
 		window.location.href = "j_spring_security_logout";
 	});
-	
+
 	$(ID_SET_UP_NEW_SPIDER_SCAN_ACTION).click(function(clickEvent) {
 		view.showDialog('#dastSpiderScanSetUp',true);
 	});
-	
+
 	$(ID_CONTACT_US_SUBMIT_ACTION).click(function(clickEvent) {
-		
+
 		var contactUsObject = new Object();
 		contactUsObject.issueType = $(ID_CONTACT_US_ISSUE_TYPE_DROP_DOWN).val();
 		contactUsObject.user = loggedInUser;
@@ -148,19 +149,19 @@ $(document).ready(function() {
 /*
  * This function sets up the view for the application. It brings up the progress bar, makes call to get the name of the
  * logged in user and also checks if the user also has a running proxy.
- * 
+ *
  * Depending on whether a proxy is already set up or not, it displays the relevant view.
- * 
+ *
  */
 function initalStartUp() {
 	"use strict";
-	
+
 	$('.carousel').each(function(){
         $(this).carousel({
             interval: false
         });
     });
-	
+
 	view.setUpToolTips();
 	view.setUpMainPageView();
 	view.showApplicationPrgoressModalWindow();
@@ -184,9 +185,9 @@ function initalStartUp() {
 }
 
 /*
- * This functions is for setting up the proxy. It does the action of setting up the progress bar, 
+ * This functions is for setting up the proxy. It does the action of setting up the progress bar,
  * making the relevant API calls and then displaying the values on the screen.
- * 
+ *
  */
 function actionOnSetUpProxy(emailId) {
 	'use strict';
@@ -220,7 +221,7 @@ function actionOnNewProxySetUpEvent(){
 	//if($("#StartRecordingSpan").is(":visible")){
 		view.hideStartRecordingHomePageOption();
 	//}
-	
+
 	view.showRecordStartedDialog();
 	setTimeout(function() {
 		//alert("hide");

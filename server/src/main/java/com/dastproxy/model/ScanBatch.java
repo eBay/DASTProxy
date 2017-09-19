@@ -20,6 +20,10 @@ import org.hibernate.annotations.CascadeType;
 @Entity
 @Table(name="scan_batch")
 public class ScanBatch {
+	
+	public static final int CREATED = 0;
+	public static final int COMPLETED = 1;
+	
 
 	@Id
 	@Column(name="id")
@@ -31,7 +35,7 @@ public class ScanBatch {
 
 	@Column(name="recording_batch_id")
 	private Long recordingBatchId;
-
+	
 	@Column(name="is_subset_of_batch")
 	private boolean subsetOfBatch;
 
@@ -43,12 +47,18 @@ public class ScanBatch {
 
 	@Column(name="last_modified")
 	private Date lastModified;
-
+		
 	@OneToMany(mappedBy="batch", fetch=FetchType.EAGER)
 	private List<Scan> scans;
-
+	
 	@Transient
 	private String displayStatus;
+	
+	@Column(name="is_nightly_batch")
+	private boolean isNightlyBatch;
+	
+	@Column(name="nightly_batch_state")
+	private int nightlyBatchState;
 
 	public String getTestsuiteName() {
 		return testsuiteName;
@@ -97,8 +107,7 @@ public class ScanBatch {
 	public void setLastModified(Date lastModified) {
 		this.lastModified = lastModified;
 	}
-
-
+	
 	public List<Scan> getScans() {
 		return scans;
 	}
@@ -115,8 +124,24 @@ public class ScanBatch {
 		this.displayStatus = displayStatus;
 	}
 
+	public boolean isNightlyBatch() {
+		return isNightlyBatch;
+	}
+
+	public void setNightlyBatch(boolean isNightlyBatch) {
+		this.isNightlyBatch = isNightlyBatch;
+	}
+
 	public Long getId() {
 		return id;
+	}
+
+	public int getNightlyBatchState() {
+		return nightlyBatchState;
+	}
+
+	public void setNightlyBatchState(int nightlyBatchState) {
+		this.nightlyBatchState = nightlyBatchState;
 	}
 
 }

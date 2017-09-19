@@ -20,12 +20,12 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import com.dastproxy.common.constants.AppScanConstants;
 import com.dastproxy.common.utils.AppScanUtils;
 import com.dastproxy.configuration.RootConfiguration;
 import com.dastproxy.model.Issue;
-import com.dastproxy.model.IssueVariant;
 import com.dastproxy.model.jira.CustomField1;
 import com.dastproxy.model.jira.CustomField10;
 import com.dastproxy.model.jira.CustomField11;
@@ -53,18 +53,18 @@ public class JiraPublisherService {
 	public JiraIssueResponse publishToJIRAProject(final String projectKey,
 			final Issue issueToBePushedToJira, final String userName,
 			final String password) throws IOException {
+		JiraIssueResponse jiraIssueResponse = null;
 
-		String description = "Details of the bug are:\n \n" + "Type: {Type}\n"
-				+ "Severity: {Severirty}\n" + "Test URL: {Test_URL}\n";
+		try {
+		String description = "Details of the bug are:<br> <br>" + "Type: {Type}<br>"
+				+ "Severity: {Severirty}<br>" + "Test URL: {Test_URL}<br>";
 
 		description = description
 				.replace("{Type}", issueToBePushedToJira.getIssueType())
 				.replace("{Severirty}", issueToBePushedToJira.getSeverity())
 				.replace("{Test_URL}", issueToBePushedToJira.getTestUrl());
 
-		LOGGER.debug(
-				"Inside JiraPublisherService.publishToJIRAProject. Using the following username",
-				userName);
+		LOGGER.debug("Inside JiraPublisherService.publishToJIRAProject. Using the following username"+userName);
 
 		final RestTemplate authorisedRestTemplate = new RestTemplate();
 
@@ -103,49 +103,33 @@ public class JiraPublisherService {
 		// fields.setDomain("Information Security");
 
 		Priority priority = new Priority();
-
-		switch (issueToBePushedToJira.getSeverity()) {
-
-		case "High":
-			priority.setName("P2");
-			break;
-
-		case "Medium":
-			priority.setName("P3");
-			break;
-
-		case "Low":
-			priority.setName("P4");
-			break;
-
-		default:
-			priority.setName("P4");
-			break;
-		}
-
-		fields.setPriority(priority);
-
 		CustomField1 customField1 = new CustomField1();
 
 		switch (issueToBePushedToJira.getSeverity()) {
 
 		case "High":
+			priority.setName("P2");
 			customField1.setValue("High Risk");
 			break;
 
 		case "Medium":
+			priority.setName("P3");
 			customField1.setValue("Risk");
 			break;
 
 		case "Low":
+			priority.setName("P4");
 			customField1.setValue("Low Risk");
 			break;
 
 		default:
+			priority.setName("P4");
 			customField1.setValue("Low Risk");
 			break;
 		}
-		fields.setCustomField1(customField1);
+
+		fields.setPriority(priority);
+		//fields.setCustomField1(customField1);
 
 		CustomField2 customField2 = new CustomField2();
 		customField2.setValue("Other");
@@ -205,70 +189,20 @@ public class JiraPublisherService {
 		
 		HttpEntity httpEntity = new HttpEntity(jiraIssueRequest, headers);
 
-		ResponseEntity<JiraIssueResponse> responseEntity = authorisedRestTemplate
-				.exchange(
-						RootConfiguration.getProperties().getProperty(
-								AppScanConstants.PROPERTIES_JIRA_BASE_URL)
-								+ "/rest/api/2/issue/", HttpMethod.POST,
-						httpEntity, JiraIssueResponse.class);
 
-		final JiraIssueResponse jiraIssueResponse = responseEntity.getBody();
+		String jiraFullURL = RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_JIRA_BASE_URL)+ "/rest/api/2/issue/";
+		LOGGER.debug("jiraFullURL="+jiraFullURL);
+		ResponseEntity<JiraIssueResponse> responseEntity = authorisedRestTemplate.exchange(jiraFullURL, HttpMethod.POST,httpEntity, JiraIssueResponse.class);
 
-		String payloadVariantTrafficPrefix = jiraIssueResponse.getKey();
-		int counter = 1;
+		LOGGER.debug("responseEntity.getHeaders()="+responseEntity.getHeaders().toString());
+		LOGGER.debug("responseEntity.getStatusCode()="+responseEntity.getStatusCode());
 
-		for (IssueVariant issueVariant : issueToBePushedToJira
-				.getIssueVariants()) {
-
-			if (AppScanUtils.isNotNull(issueVariant.getTraffic())
-					&& AppScanUtils.isNotNull(issueVariant.getTraffic()
-							.getOriginalHttpTraffic())
-					&& AppScanUtils.isNotNull(issueVariant.getTraffic()
-							.getTestHttpTraffic())) {
-
-				File tempTestTrafficFile = File.createTempFile(
-						payloadVariantTrafficPrefix
-								+ "-testTrafficDataUsingVariant-" + counter,
-						".txt");
-				byte[] testTrafficData = issueVariant.getTraffic()
-						.getTestHttpTraffic().getBytes();
-				/*FileOutputStream outputStream = new FileOutputStream(
-						tempTestTrafficFile);
-				outputStream.write(testTrafficData);
-				// Always close files.
-				outputStream.close();
-
-				System.out.println(tempTestTrafficFile.getAbsolutePath());
-				tempTestTrafficFile.delete();*/
-				
-				
-				
-				//HttpHeaders fileUploadHeaders = new HttpHeaders();
-				headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-				//headers.setContentDispositionFormData(name, filename);
-				headers.set("X-Atlassian-Token", "nocheck");
-				
-				MultiValueMap<String, Object> parts = 
-				          new LinkedMultiValueMap<String, Object>();
-				  parts.add("file", new ByteArrayResource(testTrafficData));
-				  parts.add("name", payloadVariantTrafficPrefix
-							+ "-testTrafficDataUsingVariant-" + counter+".txt");
-				HttpEntity<MultiValueMap<String, Object>> requestEntity =
-				          new HttpEntity<MultiValueMap<String, Object>>(parts, headers);
-				
-				/*try{
-				ResponseEntity<String> response =
-						authorisedRestTemplate.exchange(RootConfiguration.getProperties().getProperty(
-									AppScanConstants.PROPERTIES_JIRA_BASE_URL)
-									+ "/rest/api/2/issue/" +jiraIssueResponse.getKey()+"/attachments", 
-				                  HttpMethod.POST, requestEntity, String.class);
-				}
-				catch(Exception e){
+		jiraIssueResponse = responseEntity.getBody();
+		} catch(HttpClientErrorException e){
+			e.printStackTrace();
+			LOGGER.error(e);
+		}catch(Exception e){
 					LOGGER.error(e);
-				}*/
-				
-				counter++;	
-			}
 		}
 
 		return jiraIssueResponse;

@@ -189,8 +189,8 @@ var model = {
 			},
 			data : JSON.stringify(contactUsObject),
 			success : function(serverRespone) {
-				responseJsonObject = JSON.parse(serverRespone);
 
+				responseJsonObject = JSON.parse(serverRespone);
 			},
 			error : function() {
 				actionOnError();
@@ -204,7 +204,7 @@ var model = {
 		var responseJsonObject = null;
 		$.ajax({
 			type : "GET",
-			url : "rest/v1/report/"+reportId+"/issue/"+issueId,
+			url : "rest/v1/reportnew/"+reportId+"/issuenew/"+issueId,
 			async : false,
 			dataType : "json",
 			success : function(serverRespone) {
@@ -224,7 +224,7 @@ var model = {
 		var responseJsonObject = null;
 		$.ajax({
 			type : "GET",
-			url : "rest/v1/jira/project/"+jiraProjectId+"/report/"+reportId+"/issue/"+issueId,
+			url : "rest/v1/jira/project/"+jiraProjectId+"/reportnew/"+reportId+"/issuenew/"+issueId,
 			async : false,
 			dataType : "json",
 			success : function(serverRespone) {
@@ -234,9 +234,7 @@ var model = {
 				actionOnError();
 			}
 		});
-
 		return responseJsonObject.data;
-
 	}
 
 };

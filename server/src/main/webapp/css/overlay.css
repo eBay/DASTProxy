@@ -74,6 +74,8 @@
     margin-top: 30px;
     margin-right: 70px;
     float: right;
+    display: block;
+    
 }
 .submit_btn:active {
     color:white;

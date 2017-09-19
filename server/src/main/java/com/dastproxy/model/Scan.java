@@ -5,6 +5,8 @@ import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
@@ -22,11 +24,16 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 @Table(name="scan")
 public class Scan {
 	
-	@Transient
-	@JsonIgnore
-	private String userForlderId;
+	public static final int NIGHTLY_SCAN_STATE_CREATED=0;
+	public static final int NIGHTLY_SCAN_STATE_COMPLETED=1;
+	public static final int NIGHTLY_SCAN_STATE_POST_PROCESSING_DONE=2;
+
 	
 	@Id
+	@Column(name="id")
+	@GeneratedValue(strategy=GenerationType.IDENTITY)
+	private Long id;
+	
 	@Column(name="scan_id")
 	private String scanId;
 	
@@ -64,13 +71,13 @@ public class Scan {
 	
 	@Column(name="test_suite_name", nullable=true)
 	private String testSuiteName;
-
+	
 	@Column(name="testsuite_package", nullable=true)
 	private String testSuitePackage;
 
 	@Column(name="to_be_tracked")
 	private Boolean toBeTracked;
-	
+
 	@Column(name="testsuite_dynamic_identifier")
 	private String tsDynamicIdentifier;
 
@@ -79,14 +86,28 @@ public class Scan {
 
 	@Column(name="breeze_unique_timestamp")
 	private Long breezeUniqueTS;
-	/*
-	@Column(name="scan_batch_id")
-	private Long scanBatchId;
-	*/
 	
     @ManyToOne(fetch=FetchType.LAZY)
     @JoinColumn(name="scan_batch_id")
 	private ScanBatch batch;
+    
+	@Column(name="zap_status")
+	private String zapStatus;
+	
+	@Column(name="suspended_reason")
+	private String suspendedReason;
+	
+
+	@Transient
+	@JsonIgnore
+	private String userForlderId;
+	
+	@Column(name="is_nightly_scan")
+	private boolean isNightlyScan;
+
+	@Column(name="nightly_state")
+	private int nightlyState;
+
 	/**
 	 * @return scanId
 	 */
@@ -320,6 +341,40 @@ public class Scan {
 		this.testSuitePackage = testSuitePackage;
 	}
 
+	public String getZapStatus() {
+		return zapStatus;
+	}
 
-	
+	public void setZapStatus(String zapStatus) {
+		this.zapStatus = zapStatus;
+	}
+
+	public Long getId() {
+		return id;
+	}
+
+	public String getSuspendedReason() {
+		return suspendedReason;
+	}
+
+	public void setSuspendedReason(String suspendedReason) {
+		this.suspendedReason = suspendedReason;
+	}
+
+	public boolean isNightlyScan() {
+		return isNightlyScan;
+	}
+
+	public void setNightlyScan(boolean isNightlyScan) {
+		this.isNightlyScan = isNightlyScan;
+	}
+
+	public int getNightlyState() {
+		return nightlyState;
+	}
+
+	public void setNightlyState(int nightlyState) {
+		this.nightlyState = nightlyState;
+	}
+
 }

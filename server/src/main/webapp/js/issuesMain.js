@@ -69,7 +69,7 @@ $(document)
 													$('#jiraProjectKey').val(),
 													queryParams.report,
 													queryParams.issue);
-											
+
 											if (publishedJiraObject !== null && publishedJiraObject !== undefined
 													&& publishedJiraObject.self !== null
 													&& publishedJiraObject.self !== undefined) {
@@ -77,9 +77,9 @@ $(document)
 												$("#issueStatusDiv").text(
 														"Open (Jira Id:" + publishedJiraObject.key + ")");
 											}
-											
+
 											console.log(publishedJiraObject);
-											
+
 											view
 													.closeModalWindow(ID_APPLICATION_PROGRESS_BAR_MODAL_WINDOW);
 											view
@@ -139,30 +139,25 @@ function setUpIssueDetails(reportId, issueId) {
 	}
 
 	var issueDetails = model.getIssue(reportId, issueId);
-
 	if (issueDetails !== null && issueDetails !== undefined) {
 		if (issueDetails.issueUrl !== null
 				&& issueDetails.issueUrl !== undefined) {
 			$("#issueIdDiv").html(
 					"<a target='_blank' href='" + issueDetails.issueUrl
 							+ "' title='" + issueDetails.issueUrl + "'>"
-							+ issueDetails.issuePrimaryKey.issueId + "</a>");
+							+ issueDetails.id + "</a>");
 		} else {
-			$("#issueIdDiv").text(issueDetails.issuePrimaryKey.issueId);
+			$("#issueIdDiv").text(issueDetails.id);
 		}
 
 		$("#issueSeverityDiv").text(issueDetails.severity);
 
-		if (issueDetails.jira !== null && issueDetails.jira !== undefined
-				&& issueDetails.jira.self !== null
-				&& issueDetails.jira.self !== undefined) {
+		if (issueDetails.jiraURL !== null && issueDetails.jiraURL !== undefined) {
 
-			$("#issueStatusDiv").text(
-					"Open (Jira Id:" + issueDetails.jira.key + ")");
+			$("#issueStatusDiv").text("Open (Jira Id:" + issueDetails.jiraKey + ")");
 		} else {
 			$("#issueStatusDiv").text("Open (Not published to JIRA)");
 		}
-
 		if (issueDetails.severity === "High") {
 			$("#issueSeverityDiv").addClass("severityHigh")
 		} else if (issueDetails.severity === "Medium") {
@@ -181,41 +176,11 @@ function setUpIssueDetails(reportId, issueId) {
 							+ issueDetails.testUrl + "'></a></span>");
 			$("#issueTestURLLink").text(issueDetails.testUrl);
 		}
-
-		if (issueDetails.issueVariants !== null
-				&& issueDetails.issueVariants !== undefined
-				&& issueDetails.issueVariants.length > 0) {
-
-			var payloadVariantCounter = 1;
-			var payloadVariantCounterPaginationHTML = "";
-			/*
-			 * while (payloadVariantCounter <=
-			 * issueDetails.issueVariants.length) {
-			 * payloadVariantCounterPaginationHTML =
-			 * payloadVariantCounterPaginationHTML + "<li><a
-			 * id='payloadPaginationIndex"+payloadVariantCounter+"'>" +
-			 * payloadVariantCounter + "</a></li>"; payloadVariantCounter =
-			 * payloadVariantCounter + 1; }
-			 * $("#payloadVariantPaginationList").html(
-			 * payloadVariantCounterPaginationHTML);
-			 */
-
-			if (issueDetails.issueVariants[0].traffic !== null
-					&& issueDetails.issueVariants[0].traffic !== undefined
-					&& issueDetails.issueVariants[0].traffic.testHttpTraffic !== null
-					&& issueDetails.issueVariants[0].traffic.testHttpTraffic !== undefined) {
-				$("#testHttpTrafficPreBlock").text(
-						issueDetails.issueVariants[0].traffic.testHttpTraffic);
-			}
-
-			if (issueDetails.issueVariants[0].traffic !== null
-					&& issueDetails.issueVariants[0].traffic !== undefined
-					&& issueDetails.issueVariants[0].traffic.originalHttpTraffic !== null
-					&& issueDetails.issueVariants[0].traffic.originalHttpTraffic !== undefined) {
-				$("#originalHttpTrafficPreBlock")
-						.text(
-								issueDetails.issueVariants[0].traffic.originalHttpTraffic);
-			}
+		if (issueDetails.origHTTPtraffic !== null && issueDetails.origHTTPtraffic !== undefined) {
+			$("#originalHttpTrafficPreBlock").text(issueDetails.origHTTPtraffic);
+		}
+		if (issueDetails.testHTTPtraffic !== null && issueDetails.testHTTPtraffic !== undefined) {
+			$("#testHttpTrafficPreBlock").text(issueDetails.testHTTPtraffic);
 		}
 
 	} else {

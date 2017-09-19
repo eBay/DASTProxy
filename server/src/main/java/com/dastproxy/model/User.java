@@ -23,6 +23,12 @@ public class User implements Serializable {
 	@JsonIgnore
 	@Transient
 	private String password;
+	
+	@Column(name="enable_email_for_automated_scan")
+	private boolean enableEmailForAutomatedScan;
+	
+	@Column(name="appscan_userid")
+	private String appScanUserId;
 
 	/**
 	 * @return the userId
@@ -52,6 +58,23 @@ public class User implements Serializable {
 	 */
 	public void setUserId(final String userId) {
 		this.userId = userId;
+	}
+	
+	public boolean getEnableEmailForAutomatedScan() {
+		return enableEmailForAutomatedScan;
+	}
+
+	public void setEnableEmailForAutomatedScan(boolean enableEmailForAutomatedScan) {
+		this.enableEmailForAutomatedScan = enableEmailForAutomatedScan;
+	}
+
+	
+	public String getAppScanUserId() {
+		return appScanUserId;
+	}
+
+	public void setAppScanUserId(String appScanUserId) {
+		this.appScanUserId = appScanUserId;
 	}
 
 	/*

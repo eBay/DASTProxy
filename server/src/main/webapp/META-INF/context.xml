@@ -18,23 +18,22 @@
 		auth="Container" type="javax.sql.DataSource" />
 	<ResourceLink name="prop/DoNotReplyEmailId" global="prop/DoNotReplyEmailId"
 		type="java.lang.String" />
-	<ResourceLink name="prop/AppScanServiceAccountId" global="prop/AppScanServiceAccountId"
-		type="java.lang.String" />
-	<ResourceLink name="prop/AppScanServiceAccountPwd" global="prop/AppScanServiceAccountPwd"
-		type="java.lang.String" />
+	<ResourceLink name="prop/AppScanServiceAccountId" global="prop/AppScanServiceAccountId" type="java.lang.String" />
+	<ResourceLink name="prop/AppScanServiceAccountPwd" global="prop/AppScanServiceAccountPwd" type="java.lang.String" />
+	<ResourceLink name="prop/AppScanServiceAccountUid" global="prop/AppScanServiceAccountUid" type="java.lang.String" />
+		
 	<ResourceLink name="prop/RunCronJobs" global="prop/RunCronJobs"
 		type="java.lang.String" />
 	<ResourceLink name="prop/JIRABaseUrl" global="prop/JIRABaseUrl"
 		type="java.lang.String" />
-	<ResourceLink name="prop/JIRAServiceAccountUsername" global="prop/JIRAServiceAccountUsername"
-		type="java.lang.String" />
-	<ResourceLink name="prop/JIRAServiceAccountPassword" global="prop/JIRAServiceAccountPassword"
-		type="java.lang.String" />
+	<ResourceLink name="prop/JIRAServiceAccountUsername" global="prop/JIRAServiceAccountUsername" type="java.lang.String" />
+	<ResourceLink name="prop/JIRAServiceAccountPassword" global="prop/JIRAServiceAccountPassword" type="java.lang.String" />
 	<ResourceLink name="prop/ldapURL" global="prop/ldapURL"
 		type="java.lang.String" />
 	<ResourceLink name="prop/ldapDomain" global="prop/ldapDomain"
 		type="java.lang.String" />
 	<ResourceLink name="prop/ldapRootDn" global="prop/ldapRootDn" type="java.lang.String" />
+	<ResourceLink name="prop/ldapAltDomain" global="prop/ldapAltDomain" type="java.lang.String" />
 	<ResourceLink name="prop/smtpServerDomain" global="prop/smtpServerDomain"
 		type="java.lang.String" />
 	<ResourceLink name="prop/orgHttpProxy" global="prop/orgHttpProxy"
@@ -43,5 +42,12 @@
 		type="java.lang.String" />
 	<ResourceLink name="prop/emailDomain" global="prop/emailDomain" type="java.lang.String" />
 	<ResourceLink name="prop/whiteListPublicIPs" global="prop/whiteListPublicIPs" type="java.lang.String" />
+	<ResourceLink name="admin_groups_list" global="prop/admin_groups_list" type="java.lang.String" />
+	<ResourceLink name="admin_login_list" global="prop/admin_login_list" type="java.lang.String" />
+	
+	<ResourceLink name="metaReferrerCheckOn" global="prop/metaReferrerCheckOn" type="java.lang.String" />
+	<ResourceLink name="metaReferrerCheckEmail" global="prop/metaReferrerCheckEmail" type="java.lang.String" />
+	<ResourceLink name="metaReferrerCheckEmailCC" global="prop/metaReferrerCheckEmailCC" type="java.lang.String" />
+	<ResourceLink name="reportIssuesEmailCCAddressIfIssues" global="prop/reportIssuesEmailCCAddressIfIssues" type="java.lang.String" />
 		
 </Context>

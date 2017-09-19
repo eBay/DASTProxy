@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -47,12 +48,14 @@ import com.dastproxy.configuration.RootConfiguration;
 import com.dastproxy.dao.DastDAO;
 import com.dastproxy.model.ContactUsIssue;
 import com.dastproxy.model.DASTProxyException;
+import com.dastproxy.model.FpReason;
 import com.dastproxy.model.Issue;
 import com.dastproxy.model.IssueVO;
 import com.dastproxy.model.Proxy;
 import com.dastproxy.model.ProxyEntity;
 import com.dastproxy.model.Recording;
 import com.dastproxy.model.RecordingBatch;
+import com.dastproxy.model.Report;
 import com.dastproxy.model.Scan;
 import com.dastproxy.model.ScanBatch;
 import com.dastproxy.model.ScanConfiguration;
@@ -61,6 +64,8 @@ import com.dastproxy.model.jira.JiraIssueResponse;
 import com.dastproxy.services.BrowserMobServiceBean;
 import com.dastproxy.services.DASTApiService;
 import com.dastproxy.services.JiraPublisherService;
+import com.dastproxy.services.impl.ZapService;
+import com.dastproxy.value.FpInput;
 
 import net.lightbody.bmp.proxy.ProxyServer;
 
@@ -68,8 +73,7 @@ import net.lightbody.bmp.proxy.ProxyServer;
 public class DASTProxyHomeRestController {
 
 	// Logger for this class.
-	private static final Logger LOGGER = LogManager
-			.getLogger(DASTProxyHomeRestController.class.getName());
+	private static final Logger LOGGER = LogManager.getLogger(DASTProxyHomeRestController.class.getName());
 
 	@Autowired
 	private View view;
@@ -77,18 +81,32 @@ public class DASTProxyHomeRestController {
 	@Autowired
 	private BrowserMobServiceBean browserMobServiceBean;
 
-	@Inject
-	@Qualifier("appScanEnterpriseRestService")
+	@Autowired
 	private DASTApiService dastApiService;
 
 	@Inject
 	@Qualifier("dastDAOImpl")
 	private DastDAO dao;
 
+
+	@Autowired
+	private ZapService zapService;
+
+	public ZapService getZapService() {
+		return zapService;
+	}
+
+	public void setZapService(ZapService zapService) {
+		this.zapService = zapService;
+	}
+
+
 	@Autowired
 	private JiraPublisherService jiraPublisherService;
 
 	private Map<String, ProxyEntity> openProxyServers;
+
+	DastUtils dastUtils = new DastUtils();
 
 	/**
 	 * Initializing openProxyServers list in the constructor. This list will
@@ -101,6 +119,63 @@ public class DASTProxyHomeRestController {
 		if (openProxyServers == null) {
 			openProxyServers = new HashMap<String, ProxyEntity>();
 		}
+	}
+
+	// This function is my test function to try to build new things.
+	// It should be ALWAYS commented before released to Prod
+	@RequestMapping(value = { "/rest/v1/jira/project/{jiraProjectId}/reportnew/{reportId}/issuenew/{issueId}" }, method = RequestMethod.GET)
+	public ModelAndView publishToJIRA(@PathVariable final String jiraProjectId,
+			@PathVariable final String reportId,
+			@PathVariable final String issueId, HttpServletResponse response)
+			throws Exception {
+		System.out.println("----------------------Inside publishToJIRA...issueId="+issueId);
+		final Issue issueToBePushedToJira = dao.getIssueById(new Long(issueId));
+		LOGGER.debug("-----------------------------issueToBePushedToJira"+issueToBePushedToJira.getId());
+
+
+		// If the issue is valid then push to JIRA
+		if (AppScanUtils.isNotNull(issueToBePushedToJira)) {
+
+			final JiraIssueResponse jiraIssueResponse = jiraPublisherService
+					.publishToJIRAProject(
+							jiraProjectId,
+							issueToBePushedToJira,
+							RootConfiguration
+									.getProperties()
+									.getProperty(
+											AppScanConstants.PROPERTIES_JIRA_SERVICE_ACCOUNT_USERNAME),
+							RootConfiguration
+									.getProperties()
+									.getProperty(
+											AppScanConstants.PROPERTIES_JIRA_SERVICE_ACCOUNT_PASSWORD));
+
+			// Since jira issue has been successfully raised, it is time to send
+			// a mail to the user.
+			Map<String, Object> jiraIssueRaisedMailModal = new HashMap<String, Object>();
+			jiraIssueRaisedMailModal.put("jiraKey", jiraIssueResponse.getKey());
+			jiraIssueRaisedMailModal.put(
+					"jiraUrl",
+					RootConfiguration.getProperties().getProperty(AppScanConstants.PROPERTIES_JIRA_BASE_URL)
+							+ "/browse/" + jiraIssueResponse.getKey());
+			jiraIssueRaisedMailModal.put("contactUsSupportDl",AppScanConstants.APPSCAN_CONTACT_US_SUPPORT_DL);
+
+			MailUtils.sendEmail(AppScanUtils.getLoggedInUser().getUserId()
+					+ RootConfiguration.getProperties().getProperty(AppScanConstants.EMAIL_DOMAIN), null,
+					AppScanConstants.APPSCAN_REPORT_SENDER,
+					AppScanConstants.JIRA_ISSUE_RAISED_SUBJECT,
+					jiraIssueRaisedMailModal, AppScanConstants.JIRA_ISSUE_RAISED_TEMPLATE);
+
+			issueToBePushedToJira.setJira(jiraIssueResponse);
+			dao.saveIssue(issueToBePushedToJira);
+
+			return new ModelAndView(view,
+					AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER,
+					jiraIssueResponse);
+		} else {
+			return new ModelAndView(view,
+					AppScanConstants.JSON_RESPONSE_ERROR_IDENTIFIER,
+					"Issue is invalid");
+		}
 
 	}
 
@@ -112,7 +187,7 @@ public class DASTProxyHomeRestController {
 			@PathVariable final String issueId, HttpServletResponse response)
 			throws Exception {
 
-		final Issue issueToBePushedToJira = dao.getIssue(issueId, reportId);
+		final Issue issueToBePushedToJira = dao.getIssueByNativeId(new Long(issueId));
 
 		// If the issue is valid then push to JIRA
 		if (AppScanUtils.isNotNull(issueToBePushedToJira)) {
@@ -143,7 +218,7 @@ public class DASTProxyHomeRestController {
 					AppScanConstants.APPSCAN_CONTACT_US_SUPPORT_DL);
 
 			MailUtils.sendEmail(AppScanUtils.getLoggedInUser().getUserId()
-					+ RootConfiguration.getProperties().getProperty(AppScanConstants.EMAIL_DOMAIN),
+					+ RootConfiguration.getProperties().getProperty(AppScanConstants.EMAIL_DOMAIN), null,
 					AppScanConstants.APPSCAN_REPORT_SENDER,
 					AppScanConstants.JIRA_ISSUE_RAISED_SUBJECT,
 					jiraIssueRaisedMailModal, AppScanConstants.JIRA_ISSUE_RAISED_TEMPLATE);
@@ -207,8 +282,7 @@ public class DASTProxyHomeRestController {
 				// Instead of values given via the front end, check if a user is
 				// logged in. Consider this as a
 				// security check.
-				if (AppScanUtils.getLoggedInUser() != null
-						&& AppScanUtils.getLoggedInUser().getUserId() != null) {
+				if (AppScanUtils.getLoggedInUser() != null && AppScanUtils.getLoggedInUser().getUserId() != null) {
 
 					// So we have a logged in user. Check if the user already
 					// has a ProxyServer associated with him/her.
@@ -247,8 +321,7 @@ public class DASTProxyHomeRestController {
 									.getIpAddress(), newProxyServerForUser
 									.getPort(), true));
 
-							openProxyServers.put(AppScanUtils.getLoggedInUser()
-									.getUserId(), proxyEntity);
+							openProxyServers.put(AppScanUtils.getLoggedInUser().getUserId(), proxyEntity);
 						} else {
 							LOGGER.error("Error in returnProxyDetails function. Browser Mob Service bean didn't send me a proxy server");
 							// TODO throw custom exception condition
@@ -336,9 +409,7 @@ public class DASTProxyHomeRestController {
 	 */
 	@RequestMapping(value = { "/rest/v1/proxy" }, method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseStatus(value = HttpStatus.OK)
-	public ModelAndView returnProxyDetailsForBluefin(
-			@RequestBody ProxyEntity proxyEntity) throws DASTProxyException {
-
+	public ModelAndView returnProxyDetailsForBluefin(@RequestBody ProxyEntity proxyEntity) throws DASTProxyException {
 		// TODO Need to implement OWASP ESAPI to clean up the input coming from
 		// Bluefin/Breeze/Selenium.
 
@@ -369,14 +440,10 @@ public class DASTProxyHomeRestController {
 				if (!AppScanUtils.isNotNull(proxyEntity.getUser())
 						|| !AppScanUtils.isNotNull(proxyEntity.getUser()
 								.getUserId())) {
-					throw new DASTProxyException(
-							"Please provide a valid AppScan User Id");
+					throw new DASTProxyException("Please provide a valid AppScan User Id");
 				}
-				final ProxyServer newProxyServerFoBluefinTestCase = getBrowserMobServiceBean()
-						.setUpProxyAndStartRecordForUser(
-								proxyEntity.getProxyIdentifier());
-				proxyEntity.setProxy(new Proxy(AppScanUtils.getIpAddress(),
-						newProxyServerFoBluefinTestCase.getPort(), true));
+				final ProxyServer newProxyServerFoBluefinTestCase = getBrowserMobServiceBean().setUpProxyAndStartRecordForUser(proxyEntity.getProxyIdentifier());
+				proxyEntity.setProxy(new Proxy(AppScanUtils.getIpAddress(),newProxyServerFoBluefinTestCase.getPort(), true));
 				proxyEntity.setProxyServer(newProxyServerFoBluefinTestCase);
 				openProxyServers.put(proxyEntity.toString(), proxyEntity);
 
@@ -429,16 +496,9 @@ public class DASTProxyHomeRestController {
 		 * && !AppScanUtils.getLoggedInUser().getUserId()
 		 * .equalsIgnoreCase(AppScanConstants.BLUEFIN_USER_NAME)
 		 */) {
-			if (!openProxyServers.isEmpty()
-					&& openProxyServers.containsKey(AppScanUtils
-							.getLoggedInUser().getUserId())) {
-				browserMobServiceBean.stopServer(
-						openProxyServers.get(
-								AppScanUtils.getLoggedInUser().getUserId())
-								.getProxyServer(), AppScanUtils
-								.getLoggedInUser().getUserId());
-				openProxyServers.remove(AppScanUtils.getLoggedInUser()
-						.getUserId());
+			if (!openProxyServers.isEmpty() && openProxyServers.containsKey(AppScanUtils.getLoggedInUser().getUserId())) {
+				browserMobServiceBean.stopServer(openProxyServers.get(AppScanUtils.getLoggedInUser().getUserId()).getProxyServer(), AppScanUtils.getLoggedInUser().getUserId());
+				openProxyServers.remove(AppScanUtils.getLoggedInUser().getUserId());
 			}
 
 		} else {
@@ -513,15 +573,17 @@ public class DASTProxyHomeRestController {
 
 		if (LOGGER.isDebugEnabled()) {
 			LOGGER.debug("Inside generateCustomizedConfigFile");
-			LOGGER.debug("Request is for htd file with the identifier "
-					+ userId);
+			LOGGER.debug("Request is for htd file with the identifier "+ userId);
+			LOGGER.debug("Request is for htd file with the identifier apiCall"+ apiCall);
+			LOGGER.debug("Request is for htd file with the identifier openProxyServers.containsKey(userId)"+ openProxyServers.containsKey(userId));
 		}
 
 		String nameOfHTD = null;
 
 		if (!apiCall) {
-			if (!openProxyServers.isEmpty()
-					&& openProxyServers.containsKey(userId)) {
+			LOGGER.debug("Inside generateCustomizedConfigFile...2");
+			if (!openProxyServers.isEmpty() && openProxyServers.containsKey(userId)) {
+				LOGGER.debug("Inside generateCustomizedConfigFile...3");
 				nameOfHTD = getBrowserMobServiceBean().stopServerAndReturnHar(openProxyServers.get(userId).getProxyServer(),userId, null);
 				openProxyServers.remove(userId);
 			}
@@ -530,14 +592,13 @@ public class DASTProxyHomeRestController {
 			 * if (AppScanUtils.getLoggedInUser().getUserId()
 			 * .equalsIgnoreCase(AppScanConstants.BLUEFIN_USER_NAME)) {
 			 */
-			if (!openProxyServers.isEmpty()
-					&& openProxyServers.containsKey(userId)) {
+
+			if (!openProxyServers.isEmpty() && openProxyServers.containsKey(userId)) {
 				nameOfHTD = getBrowserMobServiceBean().stopServerAndReturnHar(
 						openProxyServers.get(userId).getProxyServer(),
 						proxyEntity.getUser().getUserId(),
-						AppScanUtils
-								.returnWindowsFileAppropriateName(proxyEntity
-										.toString()));
+						AppScanUtils.returnWindowsFileAppropriateName(proxyEntity.toString()));
+				LOGGER.debug("Inside generateCustomizedConfigFile...8");
 				openProxyServers.remove(userId);
 			}
 			/*
@@ -574,6 +635,24 @@ public class DASTProxyHomeRestController {
 		response.flushBuffer();
 	}
 
+	@RequestMapping(value = { "/rest/v1/har/{userId}/{fileId}"}, method = RequestMethod.GET)
+	public void returnHARFile(@PathVariable final String userId, @PathVariable final String fileId,
+			final HttpServletResponse response) throws Exception {
+		// TODO Need to ensure authentication
+		// TODO Handle Exception
+
+		final String filePath = new StringBuilder(
+				AppScanConstants.USER_HTD_FILES_LOCATION)
+				.append(File.separator)
+				.append(AppScanUtils.getLoggedInUser().getUserId())
+				.append(File.separator).append(fileId).toString()+".har";
+
+		response.setHeader("Content-Disposition", "attachment; filename=\"" + fileId + ".har");
+		IOUtils.copy(new FileInputStream(new File(filePath)),response.getOutputStream());
+		response.flushBuffer();
+	}
+
+
 	@RequestMapping(value = { "/rest/v1/logout" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ModelAndView logout() {
 		SecurityContextHolder.getContext().setAuthentication(null);
@@ -582,65 +661,105 @@ public class DASTProxyHomeRestController {
 				AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, "success");
 	}
 
-	@RequestMapping(value = { "/rest/v1/security/{userId}/{recordingName}" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ModelAndView setUpScan(@PathVariable final String userId, @PathVariable final String recordingName)
-			throws DASTProxyException {
+	@RequestMapping(value = { "/rest/v1/security/{userId}/{recordingName}/{testsuiteName}" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ModelAndView setUpScan(@PathVariable final String userId, @PathVariable final String recordingName, @PathVariable final String testsuiteName) throws DASTProxyException {
+		try {
+			final String userIdFromSession = AppScanUtils.getLoggedInUser().getUserId();
+			final String passwordFromSession = AppScanUtils.getLoggedInUser().getPassword();
+
+			new Thread(new Runnable() {
+			    public void run() {
 		String nameOfConfig = null;
 		String filePath = null;
 		Scan scan = null;
+					Recording recording = null;
+
 		try {
 			nameOfConfig = generateCustomizedConfigFile(userId, null, false);
+							scan = new Scan();
+							scan.setFirstSetUp(new Date());
+							scan.setToBeTracked(true);
+							scan.setTestSuiteName(testsuiteName);
+							scan.setScanState(AppScanConstants.APPSCAN_JOB_READY_FOR_SCAN);
+
+							if (scan.getReport()==null) {
+								scan.setReport(new Report());
+								scan.getReport().setAseReportId("");
+								dao.saveGenericEntity(scan.getReport());
+							}
+
+							User user = dao.getUser(userIdFromSession);
+
+							if (user==null){
+								user = new User();
+								user.setUserId(userIdFromSession);
+								dao.saveGenericEntity(user);
+								LOGGER.debug("Nightly recording batch is not there the user "+userIdFromSession+", and hence creating one.");
+								RecordingBatch nightlyrecordingBatch = dastUtils.createRecordingBatch("Nightly Batch", userIdFromSession, false, true);
+								dao.saveGenericEntity(nightlyrecordingBatch);
+							}
+
+							scan.setUser(user);
+
+							if (recordingName != null && !"none".equals(recordingName)){
+								String tempRecName =recordingName;
+								if (recordingName.length() > 45) tempRecName = recordingName.substring(0, 44);
+								scan.setTestCaseName(tempRecName);
+							} else {
+								scan.setTestCaseName(userIdFromSession + AppScanUtils.returnDateInPredefinedFormat());
+							}
 
 			filePath = new StringBuilder(
 					AppScanConstants.USER_HTD_FILES_LOCATION)
 					.append(File.separator)
-					.append(AppScanUtils.getLoggedInUser().getUserId())
+									.append(userIdFromSession)
 					.append(File.separator).append(nameOfConfig).toString();
-			scan = dastApiService.setUpScanForUser(AppScanUtils
-					.getLoggedInUser().getUserId(), AppScanUtils
-					.getLoggedInUser().getPassword(), filePath, null, true);
 
-		} catch (Exception exception) {
-
-			LOGGER.error("There has been an error while trying to set the scan up. The details of the error is: "
-					+ exception);
-			/*
-			 * This is more of a test fix. This place needs to be redesigned.
-			 * The reason here is, in case htd generation happens and ASE fails,
-			 * then that file has to be given to the user.
-			 */
-			if (AppScanUtils.isNotNull(nameOfConfig)) {
-				return new ModelAndView(view,
-						AppScanConstants.JSON_RESPONSE_ERROR_IDENTIFIER,
-						nameOfConfig);
-			} else {
-				// No htd means there has been some error
-				throw new DASTProxyException("There has been an error when trying to create an AppScan Specific Recording file (HTD file)");
-			}
-		}
 		DastUtils dastUtils = new DastUtils();
-		//System.ou
 		// Once all the scan set up work is done, then save the scan for metric
 		// purposes.
 		scan.setSetUpViaBluefin(false);
-		Recording recording = dastUtils.createRecording(recordingName, userId, filePath);
-		RecordingBatch recordingBatch = dao.getManualRecordingBatch(AppScanUtils.getLoggedInUser().getUserId());
-
+						recording = dastUtils.createRecording(recordingName, userId, filePath);
+						RecordingBatch recordingBatch = dao.getManualRecordingBatch(userIdFromSession);
 		if ( recordingBatch == null){
-			recordingBatch = dastUtils.createRecordingBatch("Manual Test Suite", AppScanUtils.getLoggedInUser().getUserId(), true);
+							recordingBatch = dastUtils.createRecordingBatch("Manual Test Suite", userIdFromSession, true, false);
 			dao.saveGenericEntity(recordingBatch);
 		}
 		dao.saveScan(scan);
 		List<Scan> scans = new ArrayList<Scan>();
 		scans.add(scan);
-		ScanBatch scanBatch = dastUtils.createScanBatch(recordingBatch.getId(), AppScanUtils.getLoggedInUser().getUserId(), AppScanConstants.APPSCAN_MANUAL_TEST_SUITE, scans);
+						ScanBatch scanBatch = dastUtils.createScanBatch(recordingBatch.getId(), userIdFromSession, AppScanConstants.APPSCAN_MANUAL_TEST_SUITE, scans);
 		dao.saveGenericEntity(scanBatch);
-		scan.setRecordingId(recording.getId());
+
 		scan.setTestCaseName(recording.getTestcaseName());
 		recording.setRecordingBatchId(recordingBatch.getId());
 		scan.setBatch(scanBatch);
+						scan.setTestSuiteName(testsuiteName);
+						scan.setScanState(AppScanConstants.APPSCAN_JOB_SCAN_STATE_NEW);
+						dao.saveGenericEntity(recording);
+						scan.setRecordingId(recording.getId());
+						dao.saveGenericEntity(scanBatch);
 		dao.saveScan(scan);
+						dastApiService.setUpScanForUser(userIdFromSession, passwordFromSession, filePath, null, true, scan);
+
+					} catch (Exception exception) {
+						LOGGER.error("There has been an error while trying to set the scan up. The details of the error is: "+ exception);
+						LOGGER.error("Another attempt will be made to re-submit the scan.");
+
+					}
+
+					//Need to get this from factory...
+					zapService.scanWithZap(recording.getHarFilename(), scan.getReport());
 		dao.saveGenericEntity(recording);
+					dao.saveGenericEntity(scan.getReport());
+					dao.saveScan(scan);
+
+			    }
+				}).start();
+			} catch (Exception exception) {
+				exception.printStackTrace();
+				LOGGER.error("There has been an error while trying to set the scan up. The details of the error is: "+ exception);
+			}
 		return new ModelAndView(view, AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, "success");
 	}
 
@@ -665,21 +784,24 @@ public class DASTProxyHomeRestController {
 						+ proxyEntity.getProxy().getProxyAddress() + " and "
 						+ proxyEntity.getProxy().getProxyPort());
 			}
+			try {
+				proxyEntity.setTestCaseName(URLEncoder.encode(proxyEntity.getTestCaseName(), "UTF-8"));
+			} catch(UnsupportedEncodingException unc){
+				LOGGER.error(unc);
+			}
 
 			final ScanConfiguration scanConfiguration = new ScanConfiguration();
 			proxyEntity.setScanConfiguration(scanConfiguration);
 
 			// String nameOfScan = null;
 			// boolean startScanAutomatically = false;
-			if (!openProxyServers.isEmpty()
-					&& openProxyServers.containsKey(proxyEntity.toString())) {
+			if (!openProxyServers.isEmpty() && openProxyServers.containsKey(proxyEntity.toString())) {
 				// TODO Input validation
 				proxyEntity.getScanConfiguration().setNameOfScan(
 						proxyEntity.getTestCaseName());
 
 				for (final String configParam : proxyEntity.getScanConfigurationParameters()) {
-					if (configParam
-							.equalsIgnoreCase(AppScanConstants.APPSCAN_AUTOMATIC_START_SCAN)) {
+					if (configParam.equalsIgnoreCase(AppScanConstants.APPSCAN_AUTOMATIC_START_SCAN)) {
 						// startScanAutomatically = true;
 						proxyEntity.getScanConfiguration().setStartScan(true);
 					}
@@ -688,12 +810,10 @@ public class DASTProxyHomeRestController {
 			}
 
 			try {
-				nameOfConfig = generateCustomizedConfigFile(
-						proxyEntity.toString(), proxyEntity, true);
+				nameOfConfig = generateCustomizedConfigFile(proxyEntity.toString(), proxyEntity, true);
 			} catch (Exception exception) {
 				LOGGER.error(exception);
-				throw new DASTProxyException(
-						"Exception in getting your recording. Contact your Administrator");
+				throw new DASTProxyException("Exception in getting your recording. Contact your Administrator");
 			}
 			proxyEntity.getProxy().setHtdFileName(nameOfConfig);
 
@@ -701,14 +821,12 @@ public class DASTProxyHomeRestController {
 				dao.saveEntity(proxyEntity);
 			} catch (Exception exception) {
 				LOGGER.error(exception);
-				throw new DASTProxyException(
-						"Unable to submit the recording to set up a scan. Contact your Administrator");
+				throw new DASTProxyException("Unable to submit the recording to set up a scan. Contact your Administrator");
 			}
 
 		} else {
 
-			throw new DASTProxyException(
-					"Error in information regarding the recording for which scan has to be set up. Contact Administrator");
+			throw new DASTProxyException("Error in information regarding the recording for which scan has to be set up. Contact Administrator");
 		}
 
 		return new ModelAndView(
@@ -763,6 +881,7 @@ public class DASTProxyHomeRestController {
 											.getProperties()
 											.getProperty(
 													AppScanConstants.PROPERTIES_CONTACT_US_SUPPORT_DL_IDENTIFIER),
+											null,
 									AppScanUtils.getLoggedInUser().getUserId()
 											+ RootConfiguration.getProperties().getProperty(AppScanConstants.EMAIL_DOMAIN),
 									"Contact Us Message From "
@@ -780,44 +899,7 @@ public class DASTProxyHomeRestController {
 				AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, "success");
 	}
 
-	/**
-	 * 
-	 * @param scanId
-	 * @return issues
-	 * @throws DASTProxyException
-	 * @throws SAXException
-	 * @throws IOException
-	 * @throws ParserConfigurationException
-	 * @throws XPathExpressionException
-	 * @throws UnsupportedEncodingException
-	 * @throws Exception
-	 */
-	/*
-	 * @RequestMapping(value = {
-	 * "/rest/v1/scan/{scanId}/report/{reportId}/issues" }, method =
-	 * RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	 * 
-	 * @ResponseStatus(value = HttpStatus.OK) public ModelAndView
-	 * getListOfIssues(@PathVariable final String scanId,
-	 * 
-	 * @PathVariable final String reportId) throws UnsupportedEncodingException,
-	 * XPathExpressionException, ParserConfigurationException, IOException,
-	 * SAXException {
-	 * 
-	 * try { final String issueLink = dastApiService.getReport(reportId); final
-	 * List<Issue> issues = dastApiService.getIssuesFromReport( scanId,
-	 * reportId, issueLink);
-	 * 
-	 * if (AppScanUtils.isNotNull(issues)) { return new ModelAndView(view,
-	 * AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, issues); } else { return
-	 * new ModelAndView(view, AppScanConstants.JSON_RESPONSE_ERROR_IDENTIFIER,
-	 * "No issue found."); } } catch (DASTProxyException exception) {
-	 * 
-	 * return new ModelAndView( view,
-	 * AppScanConstants.JSON_RESPONSE_ERROR_IDENTIFIER,
-	 * "There has been no reponse from IBM AppScan Enterprise. Either scan has never been run or the scan has been deleted."
-	 * ); } }
-	 */
+
 	/**
 	 * 
 	 * @param scanId
@@ -840,39 +922,80 @@ public class DASTProxyHomeRestController {
 			ParserConfigurationException, IOException, SAXException,
 			DASTProxyException {
 
-		final Issue issue = dao.getIssue(issueId, reportId);
+		final Issue issue = dao.getIssueByNativeId(new Long(issueId));
+		IssueVO issueVO = new IssueVO();
+		issueVO.setId(issue.getId()+"");
+		issueVO.setIssueId(issue.getNativeIssueId());
 
-		if (AppScanUtils.isNotNull(issue)) {
-			return new ModelAndView(view,
-					AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, issue);
+		issueVO.setIssueType(issue.getIssueType());
+		issueVO.setIssueUrl(issue.getIssueUrl());
+		issueVO.setSeverity(issue.getSeverity());
+		issueVO.setTestUrl(issue.getTestUrl());
+		issueVO.setReportId(reportId);
+		if (issue.getJira() != null) {
+			issueVO.setJiraURL(issue.getJira().getSelf());
+			issueVO.setJiraKey(issue.getJira().getKey());
+		}
+		issueVO.setTestHTTPtraffic(issue.getTestHttpTraffic());
+		issueVO.setOrigHTTPtraffic(issue.getOriginalHttpTraffic());
+
+		if (issue.getFpComments() != null) issueVO.setFpComments(issue.getFpComments());
+		issueVO.setFp(issue.isFp());
+		issueVO.setScanEngine(issue.getScanEngine());
+		if (issue.getFpReasonId() != null) {
+			issueVO.setFpReasonId(issue.getFpReasonId());
+			//Need to cache this.
+			FpReason fpReason = (FpReason)dao.getEntity(FpReason.class, issue.getFpReasonId());
+
+			if (fpReason.getAbbr().equalsIgnoreCase("OTHER")){
+				issueVO.setFpComments(fpReason.getAbbr() + "-" + issue.getFpComments());
 		} else {
-			return new ModelAndView(view,
-					AppScanConstants.JSON_RESPONSE_ERROR_IDENTIFIER,
-					"No such vulnerability found.");
+				issueVO.setFpComments(fpReason.getName());
 		}
 	}
+		return new ModelAndView(view,AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, issueVO);
+	}
+
 
 	private List<IssueVO> convertIssueEntitiestoVO(List<Issue> issues, String testcaseName){
 		List<IssueVO> issuesVO = new ArrayList<IssueVO>();
+		try {
+			String environmentURL = (String)RootConfiguration.getProperties().get(AppScanConstants.PROPERTIES_OPERATING_ENVIRONMENT_BASE_URL_IDENTIFIER);
 		if (issues != null){
 			for (Issue issue : issues){
 				IssueVO issueVO = new IssueVO();
-				issueVO.setIssueId(issue.getIssuePrimaryKey().getIssueId());
+				issueVO.setIssueId(issue.getId()+"");
 				issueVO.setIssueType(issue.getIssueType());
 				issueVO.setIssueUrl(issue.getIssueUrl());
 				issueVO.setSeverity(issue.getSeverity());
 				issueVO.setTestUrl(issue.getTestUrl());
+				issueVO.setIssueDastUrl(environmentURL+"issueNew?report="+issue.getReport().getId()+"&issue="+issue.getId());
 				issueVO.setTestcaseName(testcaseName);
-				issueVO.setReportId(issue.getIssuePrimaryKey().getReport().getReportId());
+				issueVO.setReportId(issue.getReport().getAseReportId());
 				if (issue.getJira() != null) issueVO.setJiraURL(issue.getJira().getKey());
-				if (issue.getIssueVariants() != null && issue.getIssueVariants().size() > 0){
-					issueVO.setTestHTTPtraffic(issue.getIssueVariants().get(0).getTraffic().getTestHttpTraffic());
-					issueVO.setOrigHTTPtraffic(issue.getIssueVariants().get(0).getTraffic().getOriginalHttpTraffic());
+				issueVO.setTestHTTPtraffic(issue.getTestHttpTraffic());
+				issueVO.setOrigHTTPtraffic(issue.getOriginalHttpTraffic());
+				if (issue.getFpComments() != null) issueVO.setFpComments(issue.getFpComments());
+				issueVO.setFp(issue.isFp());
+				issueVO.setScanEngine(issue.getScanEngine());
+				if (issue.getFpReasonId() != null) {
+					issueVO.setFpReasonId(issue.getFpReasonId());
+					//Need to cache this.
+					FpReason fpReason = (FpReason)dao.getEntity(FpReason.class, issue.getFpReasonId());
+
+					if (fpReason.getAbbr().equalsIgnoreCase("OTHER")){
+						issueVO.setFpComments(fpReason.getAbbr() + "-" + issue.getFpComments());
+					} else {
+						issueVO.setFpComments(fpReason.getName());
+					}
 				}
 
-				//issueVO.setTestHTTPtraffic(issue.getIss); //TODO
+
 				issuesVO.add(issueVO);
 			}
+		}
+		} catch (Exception e){
+			e.printStackTrace();
 		}
 		return issuesVO;
 	}
@@ -889,10 +1012,12 @@ public class DASTProxyHomeRestController {
 	@RequestMapping(value = { "/rest/v1/scanbatches" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseStatus(value = HttpStatus.OK)
 	public ModelAndView getScanBatches(){
+		DastUtils dastUtils = new DastUtils();
+		List<ScanBatch> scanBatches= null;
+		try{
 
-		final List<ScanBatch> scanBatches= dao.getScanBatches(AppScanUtils.getLoggedInUser().getUserId());
+		scanBatches = dao.getScanBatches(AppScanUtils.getLoggedInUser().getUserId(), dastUtils.isAdmin(AppScanUtils.getLoggedInUser().getUserId()));
 		for (ScanBatch batch : scanBatches){
-
 			long readyCount = batch.getScans().stream().filter(scan -> "New".equals(scan.getScanState())).count();
 			readyCount += batch.getScans().stream().filter(scan -> scan.getScanState() == null).count();
 			long runningCount = batch.getScans().stream().filter(scan -> "Running".equals(scan.getScanState())).count();
@@ -902,15 +1027,16 @@ public class DASTProxyHomeRestController {
 			//Setting this to null to avoid unnecessary scans data to be emitted as JSON. We are getting the scans data from DB only for displaying the status summary.
 			batch.setScans(null);
 		}
+		} catch(Exception e){
+			e.printStackTrace();
+		}
 
 		return new ModelAndView(view, AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, scanBatches);
 	}
 
 	@RequestMapping(value = { "/scanbatch/v1/{recordingBatchId}" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ModelAndView scanBatch(@PathVariable final Long recordingBatchId)
-			throws DASTProxyException {
+	public ModelAndView scanBatch(@PathVariable final Long recordingBatchId) throws DASTProxyException {
 		String retMessage="success";
-		Scan scan = null;
 		ScanBatch scanBatch = null;
 		List<Recording> recordings = null;
 		try {
@@ -927,15 +1053,25 @@ public class DASTProxyHomeRestController {
 					dao.saveScanBatch(scanBatch);
 				}
 				for (Recording recording: recordings){
-					scan = dastApiService.setUpScanForUser(AppScanUtils
-							.getLoggedInUser().getUserId(), AppScanUtils
-							.getLoggedInUser().getPassword(), recording.getHarFilename(), recording.getTestcaseName(), true);
-					scan.setTestCaseName(recording.getTestcaseName());
-					scan.setTestSuiteName(recording.getTestsuiteName());
+					Scan scan = createScan(recording.getTestcaseName(), recording.getTestsuiteName(), AppScanUtils.getLoggedInUser().getUserId());
 					scan.setRecordingId(recording.getId());
 					scan.setSetUpViaBluefin(false);
 					scan.setBatch(scanBatch);
 					dao.saveScan(scan);
+
+					try{
+						dastApiService.setUpScanForUser(AppScanUtils
+								.getLoggedInUser().getUserId(), AppScanUtils
+								.getLoggedInUser().getPassword(), recording.getHarFilename(), recording.getTestcaseName(), true, scan);
+					} catch(Exception exception){
+						LOGGER.error("There is an issue in submitting the scan to the server. The operation is saved and will be tried again."+ exception);
+					}
+
+					zapService.scanWithZap(recording.getHarFilename(), scan.getReport());
+					dao.saveGenericEntity(recording);
+					dao.saveScan(scan);
+
+
 				}
 			}
 
@@ -944,15 +1080,76 @@ public class DASTProxyHomeRestController {
 			LOGGER.error("There has been an error while trying to set the scan up (using the recording which was done earlier). The details of the error is: "+ exception);
 		}
 
-
 		return new ModelAndView(view,
 				AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, retMessage);
 	}
+
+	private Scan createScan(String testCaseName, String testSuiteName, String userName){
+		Scan scan = new Scan();
+		try {
+
+			scan.setReport(new Report());
+			scan.setFirstSetUp(new Date());
+			scan.setToBeTracked(true);
+			scan.setTestCaseName(testCaseName);
+			scan.setTestSuiteName(testSuiteName);
+			scan.setScanState(AppScanConstants.APPSCAN_JOB_READY_FOR_SCAN);
+			scan.getReport().setAseReportId("");
+
+			User user = new User();
+			user.setUserId(userName);
+			scan.setUser(user);
+
+
+			if (testCaseName != null && !"none".equals(testCaseName)){
+				if (testCaseName.length() > 45) testCaseName = testCaseName.substring(0, 44);
+				scan.setTestCaseName(testCaseName);
+			} else {
+				scan.setTestCaseName(AppScanUtils.getLoggedInUser().getUserId() + AppScanUtils.returnDateInPredefinedFormat());
+			}
+		} catch(Exception e){
+			e.printStackTrace();
+		}
+		return scan;
+	}
+	
+	
+	@RequestMapping(value = { "/addtonightlyrecordingbatch/v1/{recordingIds}/{batchId}" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ModelAndView addToNightlyRecordingBatch(@PathVariable final String recordingIds, @PathVariable final Long batchId) throws DASTProxyException {
+		final String userIdFromSession = AppScanUtils.getLoggedInUser().getUserId();
+
+		String retMessage="success";
+		List<Recording> recordings = null;
+		try {
+			RecordingBatch nightlyrecordingBatch = dao.getNightlyRecordingBatch(userIdFromSession);
+			if ( nightlyrecordingBatch == null){
+				LOGGER.debug("Nightly recording batch was not found for the user "+userIdFromSession+", and hence creating one.");
+				nightlyrecordingBatch = dastUtils.createRecordingBatch("Nightly Batch", userIdFromSession, false, true);
+				dao.saveGenericEntity(nightlyrecordingBatch);
+			}
+			
+			recordings = dao.getRecordingsByBatchId(batchId);
+			if (recordings != null){
+				for (Recording recording: recordings){
+					if (!recordingIds.contains("-"+recording.getId()+"-")) continue;
+					LOGGER.debug("-------------------------------------------------Inside scanselectedrecordings...Moving the recording with id="+recording.getId() +" to nightly batch.");
+					recording.setRecordingBatchId(nightlyrecordingBatch.getId());
+					dao.saveGenericEntity(recording);
+				}
+			}
+		} catch (Exception exception) {
+			retMessage="error";
+			LOGGER.error("There has been an error in moving the recording to nightly batch for user "+ userIdFromSession);
+			LOGGER.error(exception);
+		}		
+
+		return new ModelAndView(view, AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, retMessage);
+	}
+	
 	@RequestMapping(value = { "/scanselectedrecordings/v1/{recordingIds}/{batchId}" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ModelAndView scanselectedrecordings(@PathVariable final String recordingIds, @PathVariable final Long batchId)
 			throws DASTProxyException {
 		String retMessage="success";
-		Scan scan = null;
 		ScanBatch scanBatch = null;
 		List<Recording> recordings = null;
 		try {
@@ -972,16 +1169,27 @@ public class DASTProxyHomeRestController {
 				}
 				for (Recording recording: recordings){
 					if (!recordingIds.contains("-"+recording.getId()+"-")) continue;
-					scan = dastApiService.setUpScanForUser(AppScanUtils
-							.getLoggedInUser().getUserId(), AppScanUtils
-							.getLoggedInUser().getPassword(), recording.getHarFilename(), recording.getTestcaseName(), true);
-					scan.setTestCaseName(recording.getTestcaseName());
-					scan.setTestSuiteName(recording.getTestsuiteName());
+					Scan scan = createScan(recording.getTestcaseName(), recording.getTestsuiteName(), AppScanUtils.getLoggedInUser().getUserId());
 					scan.setRecordingId(recording.getId());
 					scan.setSetUpViaBluefin(false);
 					scan.setBatch(scanBatch);
 
 					dao.saveScan(scan);
+					try{
+						dastApiService.setUpScanForUser(AppScanUtils
+								.getLoggedInUser().getUserId(), AppScanUtils
+								.getLoggedInUser().getPassword(), recording.getHarFilename(), recording.getTestcaseName(), true, scan);
+					} catch(Exception exception){
+						LOGGER.error("There is an issue in submitting the scan to the server. The operation is saved and will be tried again."+ exception);
+					}
+					if (scan.getReport()==null) {
+						scan.setReport(new Report());
+						scan.getReport().setAseReportId("");
+					};
+					zapService.scanWithZap(recording.getHarFilename(), scan.getReport());
+					dao.saveGenericEntity(recording);
+					dao.saveScan(scan);
+
 				}
 			}
 
@@ -991,33 +1199,74 @@ public class DASTProxyHomeRestController {
 		}
 
 
-		return new ModelAndView(view,
-				AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, retMessage);
+		return new ModelAndView(view, AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, retMessage);
 	}
 	@RequestMapping(value = { "/rest/v1/issues/{scanBatchId}" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseStatus(value = HttpStatus.OK)
 	public ModelAndView getIssuesOfScanBatch(@PathVariable final Long scanBatchId) {
+		List<IssueVO> issuesVO = new ArrayList<IssueVO>();
+		try {
+			DastUtils dastUtils = new DastUtils();
+			boolean isAdmin = dastUtils.isAdmin(AppScanUtils.getLoggedInUser().getUserId());
+			ScanBatch scanBatch = dao.getScanBatch(AppScanUtils.getLoggedInUser().getUserId(), scanBatchId, isAdmin);
 		
-		ScanBatch scanBatch = dao.getScanBatch(AppScanUtils.getLoggedInUser().getUserId(), scanBatchId);
+			if (scanBatch == null) return new ModelAndView(view,AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, issuesVO);
 		
-		if (scanBatch == null){
-			return new ModelAndView(view,AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, new ArrayList());
 
-		}
 		List<Scan> scans = scanBatch.getScans();
 
-		List<IssueVO> issuesVO = new ArrayList<IssueVO>();
 		for (Scan scan: scans){
 			issuesVO.addAll(convertIssueEntitiestoVO(scan.getReport().getIssues(), scan.getTestCaseName()));
+		}
+		} catch (Exception e){
+			e.printStackTrace();
 		}
 
 		return new ModelAndView(view,AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, issuesVO);
 	}
+	@RequestMapping(value = { "/rest/v1/reportnew/{reportId}/issuenew/{issueId}" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ResponseStatus(value = HttpStatus.OK)
+	public ModelAndView getIssue(@PathVariable final Long issueId,@PathVariable final String reportId) {
+		Issue issue = dao.getIssueById(issueId);
+		IssueVO issueVO = new IssueVO();
+		issueVO.setId(issue.getId()+"");
+		issueVO.setIssueId(issue.getNativeIssueId());
+
+		issueVO.setIssueType(issue.getIssueType());
+		issueVO.setIssueUrl(issue.getIssueUrl());
+		issueVO.setSeverity(issue.getSeverity());
+		issueVO.setTestUrl(issue.getTestUrl());
+		issueVO.setReportId(reportId);
+		if (issue.getJira() != null) {
+			issueVO.setJiraURL(issue.getJira().getSelf());
+			issueVO.setJiraKey(issue.getJira().getKey());
+		}
+		issueVO.setTestHTTPtraffic(issue.getTestHttpTraffic());
+		issueVO.setOrigHTTPtraffic(issue.getOriginalHttpTraffic());
+
+		if (issue.getFpComments() != null) issueVO.setFpComments(issue.getFpComments());
+		issueVO.setFp(issue.isFp());
+		issueVO.setScanEngine(issue.getScanEngine());
+		if (issue.getFpReasonId() != null) {
+			issueVO.setFpReasonId(issue.getFpReasonId());
+			//Need to cache this.
+			FpReason fpReason = (FpReason)dao.getEntity(FpReason.class, issue.getFpReasonId());
+
+			if (fpReason.getAbbr().equalsIgnoreCase("OTHER")){
+				issueVO.setFpComments(fpReason.getAbbr() + "-" + issue.getFpComments());
+			} else {
+				issueVO.setFpComments(fpReason.getName());
+			}
+		}
+
+		return new ModelAndView(view,AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, issueVO);
+	}
+
 	@RequestMapping(value = { "/rest/v1/scans/{scanBatchId}" }, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	@ResponseStatus(value = HttpStatus.OK)
 	public ModelAndView getScans(@PathVariable final Long scanBatchId) {
-
-		ScanBatch scanBatch = dao.getScanBatch(AppScanUtils.getLoggedInUser().getUserId(), scanBatchId);
+		DastUtils dastUtils = new DastUtils();
+		ScanBatch scanBatch = dao.getScanBatch(AppScanUtils.getLoggedInUser().getUserId(), scanBatchId, dastUtils.isAdmin(AppScanUtils.getLoggedInUser().getUserId()));
 		
 		if (scanBatch == null){
 			return new ModelAndView(view,AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, new ArrayList());
@@ -1041,6 +1290,29 @@ public class DASTProxyHomeRestController {
 		return new ModelAndView(view, AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, recordings);
 	}
 
+	@RequestMapping(value = { "/rest/v1/mark_fp" }, method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	@ResponseStatus(value = HttpStatus.OK)
+	public ModelAndView markAsFP(@RequestBody FpInput fpInput) {
+		boolean retValue = true;
+
+		try {
+			Issue issue = (Issue) dao.getIssueById(new Long(fpInput.issueId));
+			issue.setFpComments(fpInput.comments);
+			issue.setFpMarkedBy(AppScanUtils.getLoggedInUser().getUserId());
+			issue.setFpReasonId(fpInput.fpReasonId);
+			issue.setFp(true);
+			issue.setFpMarkedDate(new Date());
+
+			dao.saveIssue(issue);
+		} catch (Exception exception){
+			retValue = false;
+			LOGGER.error(exception);
+			exception.printStackTrace();
+		}
+
+		return new ModelAndView(view,AppScanConstants.JSON_RESPONSE_DATA_IDENTIFIER, retValue);
+	}
+
 	/**
 	 * @return the browserMobServiceBean
 	 */
@@ -1052,8 +1324,7 @@ public class DASTProxyHomeRestController {
 	 * @param browserMobServiceBean
 	 *            the browserMobServiceBean to set
 	 */
-	public void setBrowserMobServiceBean(
-			final BrowserMobServiceBean browserMobServiceBean) {
+	public void setBrowserMobServiceBean(final BrowserMobServiceBean browserMobServiceBean) {
 		this.browserMobServiceBean = browserMobServiceBean;
 	}
 
@@ -1117,5 +1388,6 @@ public class DASTProxyHomeRestController {
 			final JiraPublisherService jiraPublisherService) {
 		this.jiraPublisherService = jiraPublisherService;
 	}
+
 
 }

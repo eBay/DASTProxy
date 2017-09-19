@@ -19,32 +19,37 @@
 		</RollingRandomAccessFile>
 	</appenders>
 	<Loggers>
-		<Root level="error">	
-			<appender-ref ref="RollingRandomAccessFileLogger"/>
-		</Root>	
-		<logger name="org.springframework.security" level="error">
+	<Root level="error">	
+		<appender-ref ref="RollingRandomAccessFileLogger"/>
+	</Root>	
+        <logger name="org.springframework.security" level="error">
             <appender-ref ref="Console"/>
         </logger>
         <logger name="org.springframework.security.ldap" level="error">
             <appender-ref ref="Console"/>
         </logger>
-        <logger name="org.springframework.security.ldap.authentication" level="error">
-            <appender-ref ref="Console"/>
+        <logger name="com.dastproxy.auth" level="debug">
+	        <appender-ref ref="Console"/>
+	        <appender-ref ref="RollingRandomAccessFileLogger"/>
         </logger>
-        <logger name="org.springframework.security.ldap.authentication.ad" level="error">
-            <appender-ref ref="Console"/>
+                   
+        <logger name="org.springframework.security.ldap.authentication" level="error">
+	        <appender-ref ref="Console"/>
+        </logger>
+                <logger name="org.springframework.security.ldap.authentication.ad" level="error">
+	        <appender-ref ref="Console"/>
         </logger>
         <logger name="com.dastproxy.services" level="debug">
             <appender-ref ref="Console"/>
         </logger>	
 		<logger name="com.dastproxy.services.impl" level="debug">
             <appender-ref ref="Console"/>
-        </logger>
-        <logger name="com.dastproxy.dao.impl" level="error">
+        </logger>	
+        <logger name="com.dastproxy.dao.impl" level="debug">
             <appender-ref ref="Console"/>
         </logger>	
         <logger name="com.dastproxy.controller.rest" level="debug">
             <appender-ref ref="Console"/>
-        </logger>
+        </logger>			
 	</Loggers>
 </configuration>

@@ -1,45 +1,28 @@
 /**
  * This class will hold all utility methods (methods that would be required through
- * out the entire program). 
- * 
+ * out the entire program).
+ *
  * @author Srinivasa Rao (schirathanagandl@ebay.com)
  */
 
 package com.dastproxy.common.utils;
 
-import java.io.File;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Random;
 
-import javax.inject.Inject;
+import javax.servlet.http.HttpSession;
 
-import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import com.dastproxy.common.constants.AppScanConstants;
 import com.dastproxy.configuration.RootConfiguration;
 import com.dastproxy.dao.DastDAO;
-import com.dastproxy.dao.impl.DastDAOImpl;
-import com.dastproxy.model.DASTProxyException;
-import com.dastproxy.model.Issue;
 import com.dastproxy.model.Recording;
 import com.dastproxy.model.RecordingBatch;
-import com.dastproxy.model.Report;
 import com.dastproxy.model.Scan;
 import com.dastproxy.model.ScanBatch;
 import com.dastproxy.model.User;
@@ -48,13 +31,9 @@ import com.dastproxy.model.User;
 public final class DastUtils {
 
 	// Logger for this classed. Based on Log4j.
-	private static final Logger LOGGER = LogManager
-			.getLogger(DastUtils.class.getName());
+	private static final Logger LOGGER = LogManager.getLogger(DastUtils.class.getName());
 
-	//Need to inject using spring
-	private DastDAO dao = new DastDAOImpl();
-
-	public Recording createRecording(String name, String owner, String harFilename){
+	public Recording createRecording(String name, String owner, String htdFilename){
 		Recording recordingInstance = new Recording();
 		if (name != null && !"none".equals(name)){
 			if (name.length() > 45) name = name.substring(0, 44);
@@ -64,7 +43,9 @@ public final class DastUtils {
 		}
 
 		recordingInstance.setOwner(owner);
-		recordingInstance.setHarFilename(harFilename);
+		recordingInstance.setHtdFilename(htdFilename);
+		if (htdFilename!= null)
+			recordingInstance.setHarFilename(htdFilename.replace(AppScanConstants.HTD_FILE_EXTENSION,AppScanConstants.HAR_FILE_EXTENSION));
 		recordingInstance.setEnabled(true);
 		Date now = new Date();
 		recordingInstance.setDateCreated(now);
@@ -73,13 +54,14 @@ public final class DastUtils {
 		return recordingInstance;
 	}
 
-	public RecordingBatch createRecordingBatch(String testsuiteName, String userId, boolean isManual){
+	public RecordingBatch createRecordingBatch(String testsuiteName, String userId, boolean isManual, boolean isNightly){
 		RecordingBatch batch = new RecordingBatch();
 		batch.setTestsuiteName(testsuiteName);
 		batch.setEnabled(true);
 		batch.setDateCreated(new Date());
 		batch.setManualTestBatch(isManual);
 		batch.setOwner(userId);
+		batch.setNightlyBatch(isNightly);
 
 		return batch;
 	}
@@ -94,5 +76,39 @@ public final class DastUtils {
 		batch.setScans(scans);
 
 		return batch;
+	}
+	public boolean isAdmin(String userId){
+		String attr = (String)getHttpSession().getAttribute("isAdmin");
+		boolean attrBool = (attr!=null && attr.equals("true"))?true:false;
+		if (!attrBool && userId !=null){
+			String adminLoginList = RootConfiguration.getProperties().getProperty(AppScanConstants.ADMIN_LOGIN_LIST);
+			if (adminLoginList != null && (adminLoginList.toUpperCase().contains(userId.toUpperCase()+",") || adminLoginList.toUpperCase().endsWith(userId.toUpperCase()))){
+				attrBool = true;
+			}
+		}
+
+		return attrBool;
+	}
+
+	public HttpSession getHttpSession() {
+	    ServletRequestAttributes attr = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
+	    return attr.getRequest().getSession(true); // true == allow create
+	}
+
+	public void createScanErrorRecord(String userId, String testcaseName, User user, DastDAO dao){
+		try{
+		Scan scan = new Scan();
+		scan.setToBeTracked(false);
+		scan.setScanName(testcaseName);
+		scan.setTestCaseName("Error Record");
+		scan.setScanState("Error");
+		scan.setSetUpViaBluefin(false);
+		scan.setUser(user);
+		dao.saveScan(scan);
+		scan.setTestCaseName(testcaseName);
+		dao.saveScan(scan);
+		}catch(Exception e){
+			e.printStackTrace();
+		}
 	}
 }

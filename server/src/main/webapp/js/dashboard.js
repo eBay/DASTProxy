@@ -26,10 +26,8 @@ function ScanController($scope, $http) {
  $scope.batchscans = [];
 
 _refreshData = function () {
-	//alert('Refreshing Data');
 	$http.get("rest/v1/scanbatches").success(function(data){
 
-		//alert('data.data.length='+data.data.length + ', $scope.batchscans.length='+$scope.batchscans.length);
 		if (data.data.length > 0 && $scope.batchscans.length > 0 && ((data.data.length - $scope.batchscans.length) > 0)) {
 			newRows = data.data.length - $scope.batchscans.length;
 		}
@@ -44,12 +42,6 @@ _refreshData = function () {
 				$('#scan_message').hide();
 			setTimeout(function(){
 				$("#scan_table tbody tr:nth-child(2)").css('background-color','cyan');
-				/*
-				//Not working. Have to fix it.
-						setTimeout(function(){
-							$("#scan_table tbody tr:nth-child(2)").animate('background-color','white');
-						}, 1000);
-				*/
 			}, 100);
 			newRows = 0;
 		}

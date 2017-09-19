@@ -36,12 +36,12 @@ public class MailUtils {
 	private final static VelocityEngine velocityEngine = new VelocityEngine();
 
 	// Send Email when scan starts running
-	public static void sendEmail(final String toEmailAddresses,
+	public static void sendEmail(final String toEmailAddresses, final String ccEmailAddresses,
 			final String fromEmailAddress, final String subject,
 			final Map<String, Object> model, final String template) {
 
 		setProperties();
-		prepareEmail(toEmailAddresses, fromEmailAddress, subject, model,
+		prepareEmail(toEmailAddresses, ccEmailAddresses, fromEmailAddress, subject, model,
 				template);
 	}
 
@@ -61,7 +61,7 @@ public class MailUtils {
 	}
 
 	// Create email
-	private static void prepareEmail(final String toEmailAddresses,
+	private static void prepareEmail(final String toEmailAddresses, final String ccEmailAddresses,
 			final String fromEmailAddress, final String subject,
 			final Map<String, Object> model, final String template) {
 		// TODO send email with attachment of the report.
@@ -82,12 +82,15 @@ public class MailUtils {
 							+ toEmailAddresses);
 					LOGGER.debug(AppScanConstants.DEBUG_MSG_MAIL_FROM_ADDRESS_SET
 							+ fromEmailAddress);
+					LOGGER.debug("The cc address to send mail is: "+ ccEmailAddresses);
+					
 				}
 
 				message.setTo(toEmailAddresses);
 				message.setFrom(fromEmailAddress);
 				message.setSubject(subject);
-
+				if (ccEmailAddresses!=null)message.setCc(ccEmailAddresses); 
+					
 				// set desired template as body for email
 				final String body = VelocityEngineUtils
 						.mergeTemplateIntoString(velocityEngine, template,

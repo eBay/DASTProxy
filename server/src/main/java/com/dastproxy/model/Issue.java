@@ -1,19 +1,26 @@
 package com.dastproxy.model;
 
 import java.io.Serializable;
+import java.util.Date;
 import java.util.List;
+
 import javax.annotation.Nullable;
 import javax.persistence.Column;
-import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
 import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
+
 import org.hibernate.annotations.Cascade;
 import org.hibernate.annotations.CascadeType;
+
 import com.dastproxy.model.jira.JiraIssueResponse;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -22,8 +29,20 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 public class Issue implements Serializable {
 
 	private static final long serialVersionUID = 2826904328096011698L;
-	@EmbeddedId
-	private IssuePrimaryKey issuePrimaryKey;
+	
+	@Id
+	@Column(name="id")
+	@GeneratedValue(strategy=GenerationType.IDENTITY)
+	private Long id;
+
+	@Column(name="issue_id")
+	private String nativeIssueId;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name="report_id")
+	@Cascade(CascadeType.ALL)
+	private Report report;
+	
 	@Column(name = "issue_url")
 	private String issueUrl;
 	@Column(name = "severity")
@@ -32,11 +51,6 @@ public class Issue implements Serializable {
 	private String issueType;
 	@Column(name = "test_url")
 	private String testUrl;
-
-	@OneToMany(mappedBy="issue",fetch=FetchType.EAGER, orphanRemoval=true)
-	@Cascade(CascadeType.ALL)
-	@Nullable
-	private List<IssueVariant> issueVariants;
 
 	@Transient
 	@JsonIgnore
@@ -48,6 +62,32 @@ public class Issue implements Serializable {
 	@JoinColumn(name="jira_key")
 	private JiraIssueResponse jira;
 
+	@Column(name = "fp_comments")
+	private String fpComments;
+	
+	@Column(name = "fp_marked_by")
+	private String fpMarkedBy;
+	
+	@Column(name = "fp_marked_date")
+	private Date fpMarkedDate;
+	
+	@Column(name = "date_created")
+	private Date dateCreated;
+	
+	@Column(name="is_fp")
+	private boolean isFp;
+	
+	@Column(name = "scan_engine")
+	private String scanEngine;
+	
+	@Column(name = "fp_reason_id")
+	private Long fpReasonId;
+	
+	@Column(name="test_http_traffic")
+	private String testHttpTraffic;
+	@Column(name="original_http_traffic")
+	private String originalHttpTraffic;
+	
 	/**
 	 * @return the jira
 	 */
@@ -61,22 +101,6 @@ public class Issue implements Serializable {
 	public void setJira(JiraIssueResponse jira) {
 		this.jira = jira;
 	}
-
-	/**
-	 * @return the issuePrimaryKey
-	 */
-	public IssuePrimaryKey getIssuePrimaryKey() {
-		return issuePrimaryKey;
-	}
-
-	/**
-	 * @param issuePrimaryKey
-	 *            the issuePrimaryKey to set
-	 */
-	public void setIssuePrimaryKey(IssuePrimaryKey issuePrimaryKey) {
-		this.issuePrimaryKey = issuePrimaryKey;
-	}
-
 	
 	/**
 	 * @return issueUrl
@@ -137,23 +161,6 @@ public class Issue implements Serializable {
 	public void setTestUrl(final String testUrl) {
 		this.testUrl = testUrl;
 	}
-
-	/**
-	 * 
-	 * @return issueVariant
-	 */
-	public List<IssueVariant> getIssueVariants() {
-		return issueVariants;
-	}
-
-	/**
-	 * 
-	 * @param issueVariant
-	 */
-	public void setIssueVariants(final List<IssueVariant> issueVariants) {
-		this.issueVariants = issueVariants;
-	}
-
 	/**
 	 * @return the dastProxyBugUIIssueUrl
 	 */
@@ -169,4 +176,102 @@ public class Issue implements Serializable {
 		this.dastProxyBugUIIssueUrl = dastProxyBugUIIssueUrl;
 	}
 
+	public String getFpComments() {
+		return fpComments;
+	}
+
+	public void setFpComments(String fpComments) {
+		this.fpComments = fpComments;
+	}
+
+	public String getFpMarkedBy() {
+		return fpMarkedBy;
+	}
+
+	public void setFpMarkedBy(String fpMarkedBy) {
+		this.fpMarkedBy = fpMarkedBy;
+	}
+
+	public Date getFpMarkedDate() {
+		return fpMarkedDate;
+	}
+
+	public void setFpMarkedDate(Date fpMarkedDate) {
+		this.fpMarkedDate = fpMarkedDate;
+	}
+
+	public Date getDateCreated() {
+		return dateCreated;
+	}
+
+	public void setDateCreated(Date dateCreated) {
+		this.dateCreated = dateCreated;
+	}
+
+	public boolean isFp() {
+		return isFp;
+	}
+
+	public void setFp(boolean isFp) {
+		this.isFp = isFp;
+	}
+	
+	public String getScanEngine() {
+		return scanEngine;
+	}
+
+	public void setScanEngine(String scanEngine) {
+		this.scanEngine = scanEngine;
+	}
+
+	public Long getFpReasonId() {
+		return fpReasonId;
+	}
+
+	public void setFpReasonId(Long fpReasonId) {
+		this.fpReasonId = fpReasonId;
+	}
+	
+	/**
+	 * @return the report
+	 */
+	public Report getReport() {
+		return report;
+	}
+
+	/**
+	 * @param report the report to set
+	 */
+	public void setReport(Report report) {
+		this.report = report;
+	}
+
+	public String getNativeIssueId() {
+		return nativeIssueId;
+	}
+
+	public void setNativeIssueId(String nativeIssueId) {
+		this.nativeIssueId = nativeIssueId;
+	}
+
+	public String getTestHttpTraffic() {
+		return testHttpTraffic;
+	}
+
+	public void setTestHttpTraffic(String testHttpTraffic) {
+		this.testHttpTraffic = testHttpTraffic;
+	}
+
+	public String getOriginalHttpTraffic() {
+		return originalHttpTraffic;
+	}
+
+	public void setOriginalHttpTraffic(String originalHttpTraffic) {
+		this.originalHttpTraffic = originalHttpTraffic;
+	}
+
+	public Long getId() {
+		return id;
+	}
+	
 }

@@ -90,6 +90,13 @@
 		</property>
 	</bean>
 
+	<bean id="dastDAOImpl" class="com.dastproxy.dao.impl.DastDAOImpl" />
+	<bean id="appScanEnterpriseRestService" class="com.dastproxy.services.impl.AppScanEnterpriseRestService" >
+		<property name="dastDAOImpl" ref="dastDAOImpl" />
+	</bean>
+
+	<bean id="zapService" class="com.dastproxy.services.impl.ZapService" />
+
 	<bean id="velocityEngine"
 		class="org.springframework.ui.velocity.VelocityEngineFactoryBean">
 	</bean>
@@ -98,7 +105,7 @@
 	</bean>
 
 	<jee:jndi-lookup id="dataSource" jndi-name="jdbc/DatabaseName"
-		expected-type="javax.sql.DataSource" />
+expected-type="javax.sql.DataSource" />
 
 	<!-- Hibernate 4 SessionFactory Bean definition -->
 	<bean id="sessionFactory"
@@ -113,8 +120,6 @@
 				<value>com.dastproxy.model.Scan</value>
 				<value>com.dastproxy.model.Report</value>
 				<value>com.dastproxy.model.Issue</value>
-				<value>com.dastproxy.model.IssueVariant</value>
-				<value>com.dastproxy.model.Traffic</value>
 				<value>com.dastproxy.model.Difference</value>
 				<value>com.dastproxy.model.RequestModification</value>
 				<value>com.dastproxy.model.jira.Fields</value>
@@ -126,6 +131,8 @@
 			<value>com.dastproxy.model.Recording</value>
 				<value>com.dastproxy.model.RecordingBatch</value>
 				<value>com.dastproxy.model.ScanBatch</value>
+			<value>com.dastproxy.model.FpReason</value>
+				
 			</list>
 		</property>
 		<property name="hibernateProperties">

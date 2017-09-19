@@ -1,56 +1,55 @@
 /**
- * This is the file that contains the DAO Implementation for DASTProxy. 
- * Currently it uses Hibernate to connect to a MySQL database 
+ * This is the file that contains the DAO Implementation for DASTProxy.
+ * Currently it uses Hibernate to connect to a MySQL database
  * and perform CRUD operations.
- * 
+ *
  * @author Kiran Shirali (kshirali@ebay.com)
  */
 
 package com.dastproxy.dao.impl;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.hibernate.Criteria;
 import org.hibernate.Query;
+import org.hibernate.SQLQuery;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.dastproxy.common.constants.AppScanConstants;
 import com.dastproxy.dao.DastDAO;
-import com.dastproxy.model.BreezeScanVO;
+import com.dastproxy.model.FpReason;
 import com.dastproxy.model.Issue;
 import com.dastproxy.model.ProxyEntity;
 import com.dastproxy.model.Recording;
 import com.dastproxy.model.RecordingBatch;
-import com.dastproxy.model.Report;
 import com.dastproxy.model.Scan;
 import com.dastproxy.model.ScanBatch;
+import com.dastproxy.model.User;
+import com.ibm.icu.util.Calendar;
 
-@Service
-@Qualifier("dastDAOImpl")
+@Repository("dastDAOImpl")
+@Transactional
 public class DastDAOImpl implements DastDAO {
 
 	@Autowired
 	private SessionFactory sessionFactory;
 
 	/**
-	 * 
+	 *
 	 * Save the details of a submitted proxy entity
-	 * 
+	 *
 	 * @param Proxy
-	 *            Entity Details to be saved
+	 * Entity Details to be saved
 	 */
 	public void saveEntity(final ProxyEntity proxyEntity) {
 
@@ -63,20 +62,20 @@ public class DastDAOImpl implements DastDAO {
 	}
 
 	/**
-	 * 
+	 *
 	 * Get the list of proxy entities currently residing in the database.
-	 * 
+	 *
 	 */
 	public List<ProxyEntity> getEntities() {
 		final Session session = this.sessionFactory.openSession();
-		final List<ProxyEntity> entities = session.createCriteria(ProxyEntity.class).list();
+		final List<ProxyEntity> entities = session.createCriteria(ProxyEntity.class).setMaxResults(5).list();
 		session.close();
 		return entities;
 	}
 
 	/**
 	 * Remove the details of a submitted proxy entity
-	 * 
+	 *
 	 * @param Proxy
 	 *            Entity Details to be deleted
 	 */
@@ -91,22 +90,56 @@ public class DastDAOImpl implements DastDAO {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param
 	 */
 	public void saveScan(final Scan scan) {
+		try {
 		final Session session = this.sessionFactory.openSession();
 		final Transaction transaction = session.beginTransaction();
 		session.saveOrUpdate(scan);
 		transaction.commit();
 		session.close();
+		} catch (Exception e){
+			e.printStackTrace();
+		}
 	}
+	/**
+	 *
+	 * @param
+	 */
+	public void mergeScan(final Scan scan) {
+		try {
+		final Session session = this.sessionFactory.openSession();
+		final Transaction transaction = session.beginTransaction();
+		session.merge(scan);
+		transaction.commit();
+		session.close();
+		} catch (Exception e){
+			e.printStackTrace();
+		}
+	}
+
 
 	public List<Scan> getScansToBeTracked() {
 		final Session session = this.sessionFactory.openSession();
-		final List<Scan> scans = session
-				.createQuery("from Scan scan where toBeTracked = :toBeTracked")
+		List<Scan> scans = null;
+		try {
+		scans = session
+				.createQuery("from Scan scan where toBeTracked = :toBeTracked order by firstSetUp asc").setMaxResults(10)
 				.setParameter("toBeTracked", true).list();
+		session.close();
+		} catch(Exception e){
+			e.printStackTrace();
+		}
+		return scans;
+	}
+
+	public List<Scan> getScansForZap() {
+		final Session session = this.sessionFactory.openSession();
+		final List<Scan> scans = session
+				.createQuery("from Scan scan where zap_state = :zapState")
+				.setParameter("zapState", "New").list();
 		session.close();
 		return scans;
 	}
@@ -261,23 +294,32 @@ public class DastDAOImpl implements DastDAO {
 	}
 
 	@Override
-	public Issue getIssue(final String issueId, final String reportId) {
+	public Issue getIssueByNativeId(final Long issueId) {
 
 		final Session session = this.sessionFactory.openSession();
 
-		final Report report = (Report) session
-				.createQuery(
-						"from Report report where report.reportId = :reportId")
-				.setParameter("reportId", reportId).uniqueResult();
-
-		final Issue issue = (Issue) session
-				.createQuery(
-						"from Issue issue where issue.issuePrimaryKey.issueId = :issueId and issue.issuePrimaryKey.report = :report")
-				.setParameter("issueId", issueId)
-				.setParameter("report", report).uniqueResult();
+		final Issue issue = (Issue) session.createQuery("from Issue issue where issue.nativeIssueId = :issueId").setParameter("issueId", ""+issueId).uniqueResult();
+		System.out.println("--------Inside DAO Impl...getIssueByNativeId...issue.toString()="+issue.toString());
 		session.close();
 		return issue;
 	}
+
+	@Override
+	public Issue getIssueById(final Long id) {
+
+		Issue issue = null;
+		try{
+			final Session session = this.sessionFactory.openSession();
+			issue = (Issue) session.createQuery("from Issue issue where issue.id = :issueId").setParameter("issueId", id).uniqueResult();
+			System.out.println("--------Inside DAO Impl...getIssueById...issue.toString()="+issue.toString());
+			session.close();
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+
+		return issue;
+	}
+
 
 	/**
 	 *  Save an issue
@@ -289,7 +331,7 @@ public class DastDAOImpl implements DastDAO {
 		session.saveOrUpdate(issue);
 		transaction.commit();
 		session.close();
-		
+
 	}
 
 	/**
@@ -297,11 +339,15 @@ public class DastDAOImpl implements DastDAO {
 	 */
 	@Override
 	public void saveGenericEntity(Object entity){
-		final Session session = this.sessionFactory.openSession();
-		final Transaction transaction = session.beginTransaction();
-		session.saveOrUpdate(entity);
-		transaction.commit();
-		session.close();
+		try {
+			final Session session = this.sessionFactory.openSession();
+			final Transaction transaction = session.beginTransaction();
+			session.saveOrUpdate(entity);
+			transaction.commit();
+			session.close();
+		}catch(Exception e){
+			e.printStackTrace();
+		}
 
 	}
 
@@ -378,11 +424,27 @@ public class DastDAOImpl implements DastDAO {
 
 	}
 
-	public List<ScanBatch> getScanBatches(String owner){
-		final Session session = this.sessionFactory.openSession();
-		//final List<ScanBatch> scanBatches = session.createQuery("from ScanBatch scanBatch where scanBatch.owner = :user_id order by scanBatch.dateCreated desc")
-		final List<ScanBatch> scanBatches = session.createCriteria(ScanBatch.class).add(Restrictions.eq("owner", owner)).addOrder( Order.desc("dateCreated") ).setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY).list();
-		session.close();
+	public List<ScanBatch> getScanBatches(String owner, boolean isAdmin){
+		List<ScanBatch> scanBatches = null;
+		try {
+			System.out.println("----------------------------------------Inside DAO.getScanBatches...1");
+			final Session session = this.sessionFactory.openSession();
+			System.out.println("----------------------------------------Inside DAO.getScanBatches...2");
+			//final List<ScanBatch> scanBatches = session.createQuery("from ScanBatch scanBatch where scanBatch.owner = :user_id order by scanBatch.dateCreated desc")
+			Criteria criteria = session.createCriteria(ScanBatch.class).setMaxResults(30).setFetchSize(5).addOrder( Order.desc("dateCreated") ).setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY);
+			System.out.println("----------------------------------------Inside DAO.getScanBatches...3");
+			if (!isAdmin) {
+				criteria.add(Restrictions.eq("owner", owner));
+			}
+			criteria.setMaxResults(40);
+			System.out.println("----------------------------------------Inside DAO.getScanBatches...4.."+isAdmin);
+			scanBatches = criteria.list();
+			System.out.println("----------------------------------------Inside DAO.getScanBatches...5");
+			session.close();
+		} catch (Exception e){
+			System.out.println("----------------------------------------Inside DAO.getScanBatches...6");
+			e.printStackTrace();
+		}
 		return scanBatches;
 	}
 
@@ -402,6 +464,19 @@ public class DastDAOImpl implements DastDAO {
 		return batch;
 
 	}
+	public RecordingBatch getNightlyRecordingBatch(String userId){
+		final Session session = this.sessionFactory.openSession();
+		RecordingBatch batch = null;
+		try {
+			batch = (RecordingBatch)session.createCriteria(RecordingBatch.class).add(Restrictions.eq("testsuiteName", "Nightly Batch")).add(Restrictions.eq("isNightlyBatch", true)).add(Restrictions.eq("owner", userId)).uniqueResult();
+		} catch(Exception e){
+			e.printStackTrace();
+		}
+		session.close();
+		return batch;
+
+	}
+	
 
 	public void saveScanBatch(ScanBatch scanBatch){
 		final Session session = this.sessionFactory.openSession();
@@ -411,12 +486,118 @@ public class DastDAOImpl implements DastDAO {
 		session.close();
 	}
 
-	public ScanBatch getScanBatch(String userId, Long id){
+	public ScanBatch getScanBatch(String userId, Long id, boolean isAdmin){
 		final Session session = this.sessionFactory.openSession();
 		//final List<ScanBatch> scanBatches = session.createQuery("from ScanBatch scanBatch where scanBatch.owner = :user_id order by scanBatch.dateCreated desc")
-		final ScanBatch scanBatch = (ScanBatch)session.createCriteria(ScanBatch.class).add(Restrictions.eq("id", id)).add(Restrictions.eq("owner", userId)).setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY).setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY).uniqueResult();
+		Criteria criteria = session.createCriteria(ScanBatch.class).add(Restrictions.eq("id", id));
+		if (!isAdmin) criteria.add(Restrictions.eq("owner", userId));
+		final ScanBatch scanBatch = (ScanBatch)criteria.setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY).setResultTransformer(Criteria.DISTINCT_ROOT_ENTITY).uniqueResult();
 		session.close();
 		return scanBatch;
+	}
+
+	public Object getEntity(Class clas, Long id){
+		final Session session = this.sessionFactory.openSession();
+		Object obj = session.createCriteria(clas).add(Restrictions.eq("id", id)).uniqueResult();
+		System.out.println("------------------------obj.getClass()="+obj.getClass());
+		session.close();
+		return obj;
 
 	}
+
+	public User getUser(String userId){
+		final Session session = this.sessionFactory.openSession();
+		User user = (User)session.createCriteria(User.class).add(Restrictions.eq("userId", userId)).uniqueResult();
+		session.close();
+		return user;
+
+	}
+
+	public List<FpReason> getFpReasonWithPattern(){
+		final Session session = this.sessionFactory.openSession();
+		final List<FpReason> recordings = (List<FpReason>)session.createQuery("from FpReason fpReason where fpReason.fpPattern is not null").list();
+		session.close();
+		return recordings;
+	}
+
+	public List<Scan> getAllYesterdaysScans(){
+		Calendar yestCal = Calendar.getInstance();
+		yestCal.add(Calendar.DATE, -7);
+		Date yestDate = yestCal.getTime();
+		System.out.println("-----------------yestDate="+yestDate);
+
+		final Session session = this.sessionFactory.openSession();
+		List<Scan> scans = null;
+		try {
+			scans = session
+					.createQuery("from Scan scan where scanState = :scanState and firstSetUp > :firstSetUp")
+					.setParameter("scanState", "Ready").setParameter("firstSetUp", yestDate).list();
+			session.close();
+
+		} catch(Exception e){
+			e.printStackTrace();
+		}
+		return scans;
+	}
+
+	public Integer getScanBatchIdOfScan(Long scanId) {
+		//TODO: Integer is coming from the query - need to look why it is not long
+
+		final Session session = this.sessionFactory.openSession();
+		Integer ret = null;
+		try {
+			String sql = "select scan_batch_id from dast_db.scan where id= :scanId";
+			Query query = session.createSQLQuery(sql).setParameter("scanId", scanId);
+			List results = query.list();
+			if (results !=null && results.size()>0 ) ret = (Integer)results.get(0);
+		} catch(Exception ex){
+			ex.printStackTrace();
+		}
+		session.close();
+		return ret;
+	}
+
+	public List<RecordingBatch> getNightlyBatches(){
+		final Session session = this.sessionFactory.openSession();
+		final List<RecordingBatch> recordingBatches = session.createCriteria(RecordingBatch.class)
+					.add(Restrictions.eq("isNightlyBatch", true))
+					.addOrder(Order.desc("dateCreated"))
+					.list();
+		session.close();
+		return recordingBatches;
+	}
+	
+	public List<ScanBatch> getNightlyCompletedScanBatches(){
+		final Session session = this.sessionFactory.openSession();
+		final List<ScanBatch> recordingBatches = session.createCriteria(ScanBatch.class)
+					.add(Restrictions.eq("isNightlyBatch", true))
+					.add(Restrictions.eq("nightlyBatchState", ScanBatch.CREATED))
+					.addOrder(Order.desc("dateCreated"))
+					.list();
+		session.close();
+		return recordingBatches;
+		
+	}
+	
+	public Scan getRecentNightlyScanByRecordingId(Long recordingId, Long scanId){
+		final Session session = this.sessionFactory.openSession();
+		List<Scan> scans = null;
+		Scan scan = null;
+		try {
+		scans = session
+				.createQuery("from Scan scan where recordingId = :recordingId and id < :scanId order by id desc").setMaxResults(1)
+				.setParameter("recordingId", recordingId)
+				.setParameter("scanId", scanId)
+				.list();
+		if (scans!=null && scans.size()>0) scan = scans.get(0);
+		session.close();
+		} catch(Exception e){
+			e.printStackTrace();
+		}
+		return scan;
+	}
+	//public List<Issue> getMasterListOfIssuesForNightlyBatch(Long scanBatchId){
+		
+	//}
+
 }

@@ -1,7 +1,7 @@
 /**
  * This class holds all the root configuration parameters that is looked up from Tomcat JNDI.
  * Consider this set as global properties for the project.
- * 
+ *
  * @author Kiran Shirali (kshirali@ebay.com)
  */
 package com.dastproxy.configuration;
@@ -103,6 +103,12 @@ public final class RootConfiguration {
 								(String) context
 										.lookup(AppScanConstants.JNDI_DO_SERVICE_ACCOUNT_PWD_IDENTIFIER));
 				properties
+				.setProperty(
+						AppScanConstants.PROPERTIES_APPSCAN_SERVICE_ACCOUNT_UID,
+						(String) context
+								.lookup(AppScanConstants.JNDI_DO_SERVICE_ACCOUNT_UID));
+				
+				properties
 						.setProperty(
 								AppScanConstants.PROPERTIES_RUN_CRON_JOBS,
 								(String) context
@@ -121,19 +127,19 @@ public final class RootConfiguration {
 								AppScanConstants.PROPERTIES_JIRA_SERVICE_ACCOUNT_PASSWORD,
 								(String) context
 										.lookup(AppScanConstants.JNDI_JIRA_SERVICE_ACCOUNT_PASSWORD));
-				
+
 				properties
 				.setProperty(
 						AppScanConstants.PROPERTIES_SMTP_SERVER,
 						(String) context
 								.lookup(AppScanConstants.JNDI_SMTP_SERVER));
-				
+
 				properties
 				.setProperty(
 						AppScanConstants.PROPERTIES_ORG_HTTP_PROXY,
 						(String) context
 								.lookup(AppScanConstants.JNDI_ORG_HTTP_PROXY));
-				
+
 				properties
 				.setProperty(
 						AppScanConstants.PROPERTIES_DAST_SCANNER_SCANNING_TEMPLATE_NAME_OR_ID,
@@ -150,23 +156,38 @@ public final class RootConfiguration {
 						AppScanConstants.WHITE_LIST_PIBLIC_IPS,
 						(String) context
 								.lookup(AppScanConstants.JNDI_WHITELIST_PUBLIC_IPS));
+				properties
+				.setProperty(
+						AppScanConstants.ADMIN_GROUPS_LIST,
+						(String) context
+								.lookup(AppScanConstants.ADMIN_GROUPS_LIST));
+
+				properties
+				.setProperty(
+						AppScanConstants.ADMIN_LOGIN_LIST,
+						(String) context
+								.lookup(AppScanConstants.ADMIN_LOGIN_LIST));
+				
+				properties.setProperty(AppScanConstants.META_REFERRER_CHECK_ON,(String) context.lookup(AppScanConstants.META_REFERRER_CHECK_ON));
+				properties.setProperty(AppScanConstants.META_REFERRER_CHECK_EMAIL,(String) context.lookup(AppScanConstants.META_REFERRER_CHECK_EMAIL));
+				properties.setProperty(AppScanConstants.META_REFERRER_CHECK_EMAIL_CC,(String) context.lookup(AppScanConstants.META_REFERRER_CHECK_EMAIL_CC));
+				properties.setProperty(AppScanConstants.REPORT_ISSUES_EMAIL_CC_ADDRESS_IF_ISSUES,(String) context.lookup(AppScanConstants.REPORT_ISSUES_EMAIL_CC_ADDRESS_IF_ISSUES));
+				
+				
 
 			} catch (NamingException namingException) {
-				LOGGER.error(
-						"There has been an error in RootConfiguration while setting up JNDI Configured Properties. The details are {}",
-						namingException);
+				LOGGER.error("There has been an error in RootConfiguration while setting up JNDI Configured Properties. The details are {}",namingException);
 				// TODO: Should throw a DASTProxy Exception. However, because
 				// this is being used in a static block, cannot implement a
 				// throws scenario for the bloc. Need to
 				// find a work around.
 			}
 		}
-
 	}
 
 	/**
 	 * Getter for the properties
-	 * 
+	 *
 	 * @return JNDI Properties object
 	 */
 	public static Properties getProperties() {

@@ -12,9 +12,9 @@ import com.dastproxy.model.Report;
 import com.dastproxy.model.Scan;
 
 public interface DASTApiService {
-	public Scan setUpScanForUser(String userName, String password,
+	public void setUpScanForUser(String userName, String password,
 			String pathOfConfigFile, String nameOfScan,
-			boolean startScanAutomatically) throws Exception;
+			boolean startScanAutomatically, Scan scan) throws Exception;
 
 	public void loginToDASTScanner(final String userName, final String password)
 			throws ParserConfigurationException, IOException, SAXException,
@@ -57,4 +57,7 @@ public interface DASTApiService {
 			DASTProxyException, XPathExpressionException;
 
 	public Issue getOneIssue(List<Issue> ListOfIssues, String searchForIssue);
+	public void setUpScanForUserFromService(final String userName,
+			String pathOfConfigFile, String nameOfScan,
+			final boolean startScanAutomatically, Scan scan) throws Exception;
 }

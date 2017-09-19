@@ -1,0 +1,12 @@
+<html>
+<body>
+Hi,
+<br/>
+<p><b>Note:</b> The following scan you have submitted is suspended as it has external URLs. As of now DAST supports only internal URLs.</p>
+<br/>
+$scanbatchURL
+<br/>
+Please contact the administrator at DL-eBay-SPLC-Support@ebay.com if you have any questions.
+<br/>
+</body>
+</html>
