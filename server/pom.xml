@@ -13,7 +13,7 @@
 	<name>DASTProxy</name>
 
 	<!-- Shared version number properties -->
-	<properties>
+<properties>
 		<junit.version>4.12</junit.version>
 		<net.lightbody.bmp.version>2.1.0-beta-3</net.lightbody.bmp.version>
 		<org.springframework.version>4.2.3.RELEASE</org.springframework.version>
@@ -285,6 +285,22 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+	<!-- https://mvnrepository.com/artifact/org.zaproxy/zap-clientapi -->
+		<dependency>
+		    <groupId>org.zaproxy</groupId>
+		    <artifactId>zap-clientapi</artifactId>
+		    <version>1.0.0</version>
+		</dependency>
+		<dependency>
+           <groupId>edu.umass.cs.benchlab</groupId>
+           <artifactId>harlib</artifactId>
+           <version>1.1.2</version>
+       </dependency>
+       <dependency>
+            <groupId>org.codehaus.jackson</groupId>
+            <artifactId>jackson-mapper-asl</artifactId>
+            <version>1.9.12</version>
+        </dependency>
 	</dependencies>
 	<repositories>
 		<repository>
