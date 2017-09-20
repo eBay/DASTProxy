@@ -54,7 +54,7 @@
 	<div id="divForRecordedScan" class="container">
 	<p class="lead leadBottom">
 		<div id="scan_input">
-			<div style="float:left;width:50%;"><label>Test Suite Name / Launchbay Id / Github URL</label></div>
+			<div style="float:left;width:50%;"><label>Test Suite Name</label></div>
 			<div style="float:right;width:50%;"><label>Test Case/Recording Name</label></div>
 
 			<div style="float:left;width:50%;"><input id="testsuite_name" class="input_home" type="text" maxlength="45"></input></div>
@@ -62,7 +62,7 @@
 
 		</div>
 		<div id="proxy_values" class="proxyValues" style="display:none;"> 
-			<b>Record the subset of pages that you want tested <span> Please configure your browser/selenium proxy to the following.
+			<b>Record the subset of pages that you want tested <span> Please configure your browser/selenium proxy to the following. To learn how to configure, click <a href="https://wiki.vip.corp.ebay.com/display/SENA/2.+How+to+complete+manual+flow-based+testing+with+AppScan+Enterprise+and+DAST+Proxy" 
 			target="_blank">here</a></b>
 			<div style="height:2em;padding-top:10px;"><span> Proxy Host:</span> <span data-original-title="Tooltip" title="This is the IP address of the proxy's server" id="proxyHost"></span></div>
 			<div style="height:2em;padding-top:5px;"><span> Proxy Port: </span><span data-original-title="Tooltip" title="This is the port on which the proxy is listening to HTTP/HTTPS traffic" id="proxyPort"></span></div>
@@ -348,34 +348,8 @@
 					<span aria-hidden="true">&times;</span><span class="sr-only">Close</span>
 				</button>
 				<h4 class="modal-title">
-					<b>Has recording completed? What should be done next? </b>
+					Please choose one of the following options
 				</h4>
-			</div>
-			<div class="modal-body">
-				<div id="carouselForStopRecordingOptions" class="carousel slide"
-					data-ride="carousel">
-
-					<div class="carousel-inner">
-						<div id="stopRecordingCarousalOption1" class="item active">
-							<img src="images/setUpScanOnAppScan.jpg"
-								alt="Set on scan automatically on AppScan Enterprise">
-						</div>
-						<div id="stopRecordingCarousalOption2" class="item">
-							<img src="images/getHTDFile.jpg"
-								alt="Get Recordings in HTD File format that IBM AppScan Enterprise can accept">
-						</div>
-					</div>
-
-					<a class="left carousel-control"
-						onclick="$('#carouselForStopRecordingOptions').carousel('prev')"
-						role="button" data-slide="prev"> <span
-						class="glyphicon glyphicon-chevron-left"></span>
-					</a> <a class="right carousel-control"
-						onclick="$('#carouselForStopRecordingOptions').carousel('next')"
-						role="button" data-slide="next"> <span
-						class="glyphicon glyphicon-chevron-right"></span>
-					</a>
-				</div>
 			</div>
 			<div class="modal-footer">
 				<button type="button" onclick="actionOnCancelRecording();"
