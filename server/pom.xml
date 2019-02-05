@@ -16,10 +16,10 @@
 <properties>
 		<junit.version>4.12</junit.version>
 		<net.lightbody.bmp.version>2.1.0-beta-3</net.lightbody.bmp.version>
-		<org.springframework.version>4.2.3.RELEASE</org.springframework.version>
-		<org.springframework.security.version>4.0.3.RELEASE</org.springframework.security.version>
+		<org.springframework.version>4.3.17.RELEASE</org.springframework.version>
+		<org.springframework.security.version>4.2.0.RELEASE</org.springframework.security.version>
 		<org.springframework.ldap.version>2.0.4.RELEASE</org.springframework.ldap.version>
-		<jackson.mapper.version>2.6.3</jackson.mapper.version>
+		<jackson.mapper.version>2.9.1</jackson.mapper.version>
 		<org.apache.logging.log4j.version>2.4.1</org.apache.logging.log4j.version>
 		<aspectJ.version>1.8.7</aspectJ.version>
 		<org.slf4j.version>1.7.13</org.slf4j.version>
