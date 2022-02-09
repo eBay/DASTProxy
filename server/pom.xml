@@ -26,7 +26,7 @@
 		<com.sun.mail.version>1.5.2</com.sun.mail.version>
 		<commons-collections.version>3.2.1</commons-collections.version>
 		<org.apache.httpcomponents.httpclient.version>4.5.1</org.apache.httpcomponents.httpclient.version>
-		<hibernate.version>5.0.2.Final</hibernate.version>
+		<hibernate.version>5.4.24.Final</hibernate.version>
 		<mysql-connector-java.version>5.1.37</mysql-connector-java.version>
 		<org.owasp.esapi.version>2.1.0</org.owasp.esapi.version>
 		<org.owasp.dependency-check-maven.version>1.3.1</org.owasp.dependency-check-maven.version>
