@@ -24,7 +24,7 @@
 		<aspectJ.version>1.8.7</aspectJ.version>
 		<org.slf4j.version>1.7.13</org.slf4j.version>
 		<com.sun.mail.version>1.5.2</com.sun.mail.version>
-		<commons-collections.version>3.2.1</commons-collections.version>
+		<commons-collections.version>3.2.2</commons-collections.version>
 		<org.apache.httpcomponents.httpclient.version>4.5.1</org.apache.httpcomponents.httpclient.version>
 		<hibernate.version>5.0.2.Final</hibernate.version>
 		<mysql-connector-java.version>5.1.37</mysql-connector-java.version>
