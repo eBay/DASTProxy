@@ -51,7 +51,7 @@
 	</bean>
 
 	<bean
-		class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
+		class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter">
 		<property name="messageConverters">
 			<util:list id="beanList">
 				<ref bean="jsonMessageConverter" />
@@ -64,12 +64,12 @@
 		class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter" />
 
 	<bean
-		class="org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping">
+		class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping">
 	</bean>
 
 
-	<bean
-		class="org.springframework.web.servlet.mvc.support.ControllerClassNameHandlerMapping" />
+<!--	<bean-->
+<!--		class="org.springframework.web.servlet.mvc.support.ControllerClassNameHandlerMapping" />-->
 
 	<!-- Most controllers will use the ControllerClassNameHandlerMapping above, 
 		but for the index controller we are using ParameterizableViewController, 
@@ -98,7 +98,7 @@
 	<bean id="zapService" class="com.dastproxy.services.impl.ZapService" />
 
 	<bean id="velocityEngine"
-		class="org.springframework.ui.velocity.VelocityEngineFactoryBean">
+		class="org.apache.velocity.spring.VelocityEngineFactoryBean">
 	</bean>
 
 	<bean id="mailSender" class="org.springframework.mail.javamail.JavaMailSenderImpl">
@@ -109,7 +109,7 @@ expected-type="javax.sql.DataSource" />
 
 	<!-- Hibernate 4 SessionFactory Bean definition -->
 	<bean id="sessionFactory"
-		class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+		class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
 		<property name="dataSource" ref="dataSource" />
 		<property name="annotatedClasses">
 			<list>

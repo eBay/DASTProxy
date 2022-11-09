@@ -17,7 +17,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.mail.javamail.MimeMessagePreparator;
-import org.springframework.ui.velocity.VelocityEngineUtils;
+import org.apache.velocity.spring.VelocityEngineUtils;
 import com.dastproxy.common.constants.AppScanConstants;
 
 import javax.mail.MessagingException;
