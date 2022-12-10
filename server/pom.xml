@@ -16,7 +16,7 @@
 <properties>
 		<junit.version>4.12</junit.version>
 		<net.lightbody.bmp.version>2.1.0-beta-3</net.lightbody.bmp.version>
-		<org.springframework.version>5.2.22.RELEASE</org.springframework.version>
+		<org.springframework.version>6.0.0</org.springframework.version>
 		<org.springframework.security.version>5.7.1</org.springframework.security.version>
 		<org.springframework.ldap.version>2.0.4.RELEASE</org.springframework.ldap.version>
 		<jackson.mapper.version>2.9.8</jackson.mapper.version>
